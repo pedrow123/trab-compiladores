@@ -5,28 +5,47 @@
 
 extern int yylex();
 void yyerror(const char *s);
+extern int yylineno;
 %}
 
-%token PROGRAM ID PONTO_FINAL VAR INTEIRO REAL FUNCTION PROCEDURE
-%token ABRE_PARENTESES FECHA_PARENTESES PONTO_VIRGULA DOIS_PONTOS
-%token BEGIN_TOKEN END IF THEN ELSE WHILE DO OPERADOR_ATRIBUICAO
-%token OPERADOR_RELACIONAL MAIS MENOS OR OPERADOR_MULTIPLICATIVO NUM
+%union {
+    int inteiro;
+    double real;
+    char *str;
+}
+
+%token <str> ID
+%token NUM OPERADOR_MULTIPLICATIVO OR MENOS MAIS OPERADOR_RELACIONAL 
+%token OPERADOR_ATRIBUICAO DO WHILE ELSE THEN IF END BEGIN_TOKEN
+%token DOIS_PONTOS PONTO_VIRGULA FECHA_PARENTESES ABRE_PARENTESES
+%token PROCEDURE FUNCTION REAL INTEIRO VAR PONTO_FINAL PROGRAM EOL VIRGULA
+
+%type <str> LISTA_DE_IDENTIFICADORES 
+%type <str> TIPO
 
 %%
 
-PROGRAMA: PROGRAM ID ABRE_PARENTESES LISTA_DE_IDENTIFICADORES FECHA_PARENTESES PONTO_VIRGULA
-          DECLARACOES DECLARACOES_DE_SUBPROGRAMAS ENUNCIADO_COMPOSTO PONTO_FINAL
+PROGRAMA: PROGRAM ID PONTO_VIRGULA
+          DECLARACOES
           { printf("Programa válido!\n"); }
         ;
 
 LISTA_DE_IDENTIFICADORES: ID
-                        | LISTA_DE_IDENTIFICADORES ',' ID
+                        | LISTA_DE_IDENTIFICADORES VIRGULA ID
                         ;
+
+DECLARACOES: DECLARACOES VAR LISTA_DE_IDENTIFICADORES DOIS_PONTOS TIPO PONTO_VIRGULA 
+           | /* empty */ 
+           ;
+
+TIPO: INTEIRO {$$ = "INTEIRO";}
+    | REAL  {$$ = "REAL";}
+    ;
 
 %%
 
 void yyerror(const char *s) {
-    fprintf(stderr, "Erro sintático: %s\n", s);
+    fprintf(stderr, "Erro: %s na linha: %d\n", s, yylineno);
 }
 
 int main() {
