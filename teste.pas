@@ -1,3 +1,3 @@
-program Teste;
-var
-    x, y: integer;
+program Teste(input, output);
+var x, y: integer;
+var z: real;

@@ -42,7 +42,7 @@ ID [a-zA-Z][a-zA-Z1-9]*
     yylval.str = strdup(yytext);
     return ID; }
 
-\n {  }
+\n { }
 [ \t] {/*ignorar espacos em branco, incluindo tabs*/}
 
 %%
