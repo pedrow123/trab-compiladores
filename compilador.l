@@ -2,6 +2,8 @@
 
 %{
 #include "parser.tab.h"
+#include "tabela_simbolos.h"
+#include "compilador.h"
 
 char err_buffer[500];
 %}

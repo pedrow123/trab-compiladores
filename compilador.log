@@ -1,0 +1,21 @@
+----- TABELA DE SÍMBOLOS -----
+nome: z, tipo simbolo: variavel, tipo: REAL, escopo: 0 
+nome: y, tipo simbolo: variavel, tipo: INTEIRO, escopo: 0 
+nome: x, tipo simbolo: variavel, tipo: INTEIRO, escopo: 0 
+------------------------------
+----- TABELA DE SÍMBOLOS -----
+nome: tes, tipo simbolo: variavel, tipo: INTEIRO, escopo: 1 
+nome: plus, tipo simbolo: funcao, tipo: INTEIRO, escopo: 0 
+nome: b, tipo simbolo: parametro, tipo: INTEIRO, escopo: 1 
+nome: a, tipo simbolo: parametro, tipo: INTEIRO, escopo: 1 
+nome: z, tipo simbolo: variavel, tipo: REAL, escopo: 0 
+nome: y, tipo simbolo: variavel, tipo: INTEIRO, escopo: 0 
+nome: x, tipo simbolo: variavel, tipo: INTEIRO, escopo: 0 
+------------------------------
+----- TABELA DE SÍMBOLOS -----
+nome: plus, tipo simbolo: funcao, tipo: INTEIRO, escopo: 0 
+nome: z, tipo simbolo: variavel, tipo: REAL, escopo: 0 
+nome: y, tipo simbolo: variavel, tipo: INTEIRO, escopo: 0 
+nome: x, tipo simbolo: variavel, tipo: INTEIRO, escopo: 0 
+------------------------------
+Finalizando compilacao
