@@ -11,6 +11,7 @@ FILE *log_file, *out_file;
 
 tabela_simbolos_t* tab_simbolos = NULL;
 int escopo_atual = 0;
+int variaveis_num = 0;
 %}
 
 %union {
@@ -32,7 +33,7 @@ int escopo_atual = 0;
 %%
 
 PROGRAMA: PROGRAM ID ABRE_PARENTESES LISTA_DE_IDENTIFICADORES FECHA_PARENTESES PONTO_VIRGULA
-        DECLARACOES {imprime_ts(log_file, tab_simbolos);}
+        DECLARACOES {cria_globais(tab_simbolos, out_file); imprime_ts(log_file, tab_simbolos);}
         DECLARACOES_DE_SUBPROGRAMAS {imprime_ts(log_file, tab_simbolos);}
         {destroi_tabela(tab_simbolos);}
         ;
@@ -41,7 +42,7 @@ LISTA_DE_IDENTIFICADORES: ID {$$ = insere_lista_simbolo(NULL, cria_simbolo($1, "
                         | LISTA_DE_IDENTIFICADORES VIRGULA ID {$$ = insere_lista_simbolo($1, cria_simbolo($3, "variavel", escopo_atual));}
                         ;
 
-DECLARACOES: DECLARACOES VAR LISTA_DE_IDENTIFICADORES DOIS_PONTOS TIPO PONTO_VIRGULA {atualiza_tipo_simbolos($3, $5); tab_simbolos = insere_simbolos_ts(tab_simbolos, $3);}
+DECLARACOES: DECLARACOES VAR LISTA_DE_IDENTIFICADORES DOIS_PONTOS TIPO PONTO_VIRGULA {atualiza_tipo_simbolos($3, $5); tab_simbolos = insere_simbolos_ts(tab_simbolos, $3); }
            | /* empty */ 
            ;
 
@@ -136,7 +137,7 @@ SINAL: MAIS
 
 int main(int argc, char ** argv) {
     log_file = fopen ("compilador.log", "w");
-    //out_file = fopen ("output.ll", "w");
+    out_file = fopen ("output.ll", "w");
     if (argc == 2) {
         yyin = fopen(argv[1], "r");
         yylineno=1;
@@ -145,7 +146,7 @@ int main(int argc, char ** argv) {
         yyparse();
     }    
     fprintf(log_file, "Finalizando compilacao\n");
-    //fclose(out_file);
+    fclose(out_file);
     fclose(log_file);
     return 0;
 }

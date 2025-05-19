@@ -126,3 +126,13 @@ void imprime_ts (FILE *fp, tabela_simbolos_t* ts) {
     fprintf(fp, "------------------------------\n");
 }
 
+void cria_globais(tabela_simbolos_t* ts, FILE* fp){
+    while(ts != NULL){
+        if(strcmp(ts->simb->tipo, "INTEIRO")){
+            fprintf(fp, "@%s global i32 0\n", ts->simb->nome);
+        } else {
+            fprintf(fp, "@%s global float 0\n", ts->simb->nome);
+        }
+        ts = ts->prox;
+    }
+}
