@@ -1,6 +1,7 @@
 %{
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "tabela_simbolos.h"
 #include "llvm_lib.h"
 #include "compilador.h"
@@ -13,6 +14,13 @@ FILE *log_file, *out_file;
 tabela_simbolos_t* tab_simbolos = NULL;
 int escopo_atual = 0;
 int variaveis_num = 0;
+int temp_count = 0;
+
+char* gera_temp() {
+    char* nome = malloc(10);
+    sprintf(nome, "t%d", temp_count++);
+    return nome;
+}
 
 %}
 
@@ -23,13 +31,15 @@ int variaveis_num = 0;
 }
 
 %token <str> ID
-%token NUM OPERADOR_MULTIPLICATIVO OR MENOS MAIS OPERADOR_RELACIONAL 
+%token <str> NUM
+%token OPERADOR_MULTIPLICATIVO OR MENOS MAIS OPERADOR_RELACIONAL 
 %token OPERADOR_ATRIBUICAO DO WHILE ELSE THEN IF END BEGIN_TOKEN
 %token DOIS_PONTOS PONTO_VIRGULA FECHA_PARENTESES ABRE_PARENTESES
 %token FUNCTION PROCEDURE REAL INTEIRO VAR PONTO_FINAL PROGRAM EOL VIRGULA
 
 %type <lista_s> LISTA_DE_IDENTIFICADORES LISTA_DE_PARAMETROS
 %type <lista_s> FUNCTION PROCEDURE 
+%type <str> FATOR EXPRESSAO EXPRESSAO_SIMPLES TERMO VARIAVEL
 %type <tipo> TIPO
 
 %%
@@ -94,13 +104,18 @@ LISTA_DE_ENUNCIADOS: ENUNCIADO
                    ;
 
 ENUNCIADO: VARIAVEL OPERADOR_ATRIBUICAO EXPRESSAO
+        {
+            // $1: nome da variável (ex: "tes")
+            // $3: nome do temporário com o valor (ex: "%t0")
+            fprintf(out_file, "store i32 %s, ptr %%%s\n", $3, $1);
+        }
          | CHAMADA_DE_PROCEDIMENTO
          | ENUNCIADO_COMPOSTO
          | IF EXPRESSAO THEN ENUNCIADO ELSE ENUNCIADO
          | WHILE EXPRESSAO DO ENUNCIADO 
          ;
 
-VARIAVEL: ID 
+VARIAVEL: ID { $$ = $1; }
         ;
 
 CHAMADA_DE_PROCEDIMENTO: ID
@@ -116,7 +131,9 @@ EXPRESSAO: EXPRESSAO_SIMPLES
          ;
 
 EXPRESSAO_SIMPLES: TERMO
-                 | SINAL TERMO  
+                 | SINAL TERMO  {
+                    $$ = $2; // ignora o sinal por enquanto
+                } 
                  | EXPRESSAO_SIMPLES MAIS EXPRESSAO_SIMPLES 
                  | EXPRESSAO_SIMPLES MENOS EXPRESSAO_SIMPLES 
                  | EXPRESSAO_SIMPLES OR EXPRESSAO_SIMPLES 
@@ -126,10 +143,21 @@ TERMO: FATOR
      | TERMO OPERADOR_MULTIPLICATIVO FATOR
      ;
 
-FATOR: ID
+FATOR: ID {
+        simbolo_t* s = busca_simbolo(tab_simbolos, $1);
+        char* temp = gera_temp();
+        fprintf(out_file, "%%%s = load %s, ptr %%%s\n", temp, converte_tipo(s->tipo), $1);
+        $$ = strdup(temp);
+    }
      | ID ABRE_PARENTESES LISTA_DE_EXPRESSOES FECHA_PARENTESES
-     | NUM 
-     | ABRE_PARENTESES EXPRESSAO FECHA_PARENTESES 
+     | NUM {
+        char* temp = gera_temp();
+        fprintf(out_file, "%%%s = add i32 0, %s\n", temp, $1);  // constante vira temporário
+        $$ = strdup(temp);
+    }
+     | ABRE_PARENTESES EXPRESSAO FECHA_PARENTESES {
+        $$ = $2;
+    }
      ;
 
 SINAL: MAIS

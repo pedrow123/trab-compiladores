@@ -59,6 +59,12 @@ tabela_simbolos_t * cria_novo_simbolo_ts(tabela_simbolos_t * ts, simbolo_t * sim
     tabela_simbolos_t * novo = malloc(sizeof(tabela_simbolos_t));
     novo->simb = simb;
     novo->prox = ts;
+    novo->prev = NULL;
+
+    if (ts != NULL) {
+        ts->prev = novo;
+    }
+
     return novo;
 }
 tabela_simbolos_t * insere_simbolos_ts(tabela_simbolos_t * ts, lista_simbolo_t * lista){
@@ -135,4 +141,10 @@ void cria_globais(tabela_simbolos_t* ts, FILE* fp){
         }
         ts = ts->prox;
     }
+}
+
+tabela_simbolos_t* ir_para_fim(tabela_simbolos_t* ts) {
+    while (ts && ts->prox != NULL)
+        ts = ts->prox;
+    return ts;
 }

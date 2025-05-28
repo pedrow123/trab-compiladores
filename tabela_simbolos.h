@@ -11,6 +11,7 @@ typedef struct simbolo {
 typedef struct tabela_simbolo {
     simbolo_t *simb;
     struct tabela_simbolo *prox;
+    struct tabela_simbolo *prev;
 } tabela_simbolos_t;
 
 typedef struct lista_simbolo {
@@ -41,5 +42,7 @@ tabela_simbolos_t* destroi_var_locais(tabela_simbolos_t* ts);
 void imprime_ts (FILE *fp, tabela_simbolos_t* ts);
 
 void cria_globais(tabela_simbolos_t* ts, FILE* fp);
+
+tabela_simbolos_t* ir_para_fim(tabela_simbolos_t* ts);
 
 #endif

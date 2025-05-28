@@ -826,7 +826,7 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 YY_RULE_SETUP
 #line 17 "compilador.l"
-{ return NUM; }
+{ yylval.str = strdup(yytext); return NUM; }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP

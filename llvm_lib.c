@@ -2,61 +2,61 @@
 #include "compilador.h"
 #include <string.h>
 
-void cria_func(FILE* fp, tabela_simbolos_t* ts){
+void cria_func(FILE* fp, tabela_simbolos_t* ts_original){
+    // tabela_simbolos_t* ts = reverter_lista(ts_original);
+    // tabela_simbolos_t* ts = ir_para_fim(ts_original);
+    tabela_simbolos_t* ts = ts_original;
     while(ts->simb->escopo == 1){
         ts = ts->prox;
     }
 
+    
     fprintf(fp, "\ndefine %s @%s(", converte_tipo(ts->simb->tipo), ts->simb->nome);
-    ts = emite_param(fp, ts->prox);
+    emite_param(fp, ts);
+        
 }
 
-tabela_simbolos_t* emite_param (FILE* fp, tabela_simbolos_t* nodo) {
-    // Primeira etapa: coletar parâmetros em ordem correta
-    tabela_simbolos_t* parametros[64]; // limite de até 64 params
+tabela_simbolos_t* emite_param(FILE* fp, tabela_simbolos_t* nodo) {
     int count = 0;
+    tabela_simbolos_t* params[64];
 
-    tabela_simbolos_t* aux = nodo;
-    while (aux && (!strcmp("parametro", aux->simb->tipo_simb) || !strcmp("parametro-ponteiro", aux->simb->tipo_simb))) {
-        parametros[count++] = aux;
+    tabela_simbolos_t* aux = nodo->prox;  // pula o símbolo da função
+
+    while (aux && (strcmp(aux->simb->tipo_simb, "parametro") == 0 || strcmp(aux->simb->tipo_simb, "parametro-ponteiro") == 0)) {
+        params[count++] = aux;
         aux = aux->prox;
     }
 
-    // Gera a assinatura da função
-    for (int i = 0; i < count; i++) {
-        if (!strcmp("parametro", parametros[i]->simb->tipo_simb)) {
-            fprintf(fp, "%s %%%s_t", converte_tipo(parametros[i]->simb->tipo), parametros[i]->simb->nome);
-        } else if (!strcmp("parametro-ponteiro", parametros[i]->simb->tipo_simb)) {
-            fprintf(fp, "ptr %%%s_t", parametros[i]->simb->nome);
-        }
+    printf("%d", count);
 
-        if (i != count - 1)
+    for (int i = count - 1; i >= 0; i--) {
+        if (!strcmp(params[i]->simb->tipo_simb, "parametro"))
+            fprintf(fp, "%s %%%s_t", converte_tipo(params[i]->simb->tipo), params[i]->simb->nome);
+        else
+            fprintf(fp, "ptr %%%s_t", params[i]->simb->nome);
+
+        if (i != 0)
             fprintf(fp, ", ");
     }
 
     fprintf(fp, ") {\nentry:\n\n");
 
-    // Agora alloca os parâmetros
-    for (int i = 0; i < count; i++) {
-        fprintf(fp, "%%%s = alloca %s\n", parametros[i]->simb->nome, converte_tipo(parametros[i]->simb->tipo));
+    // Emite código de alocação e store dos parâmetros
+    for (int i = count -1; i >= 0; i--) {
+        fprintf(fp, "%%%s = alloca %s\n", params[i]->simb->nome, converte_tipo(params[i]->simb->tipo));
         fprintf(fp, "store %s %%%s_t, ptr %%%s\n",
-            converte_tipo(parametros[i]->simb->tipo),
-            parametros[i]->simb->nome,
-            parametros[i]->simb->nome
+            converte_tipo(params[i]->simb->tipo),
+            params[i]->simb->nome,
+            params[i]->simb->nome
         );
     }
 
-    // Atualiza nodo para continuar emitindo variáveis
-    nodo = aux;
+    tabela_simbolos_t* fim = ir_para_fim(nodo);
+    alloca_variaveis_locais(fp, fim);
 
-    // Alloca variáveis locais
-    while (nodo && (!strcmp("variavel", nodo->simb->tipo_simb) || !strcmp("retorno", nodo->simb->tipo_simb))) {
-        fprintf(fp, "%%%s = alloca %s\n", nodo->simb->nome, converte_tipo(nodo->simb->tipo));
-        nodo = nodo->prox;
-    }
-
-    return nodo;
+    return aux;
 }
+
 
 
 char *converte_tipo (char* tipo) {
@@ -68,4 +68,18 @@ char *converte_tipo (char* tipo) {
         return "void";
     else
         return "i1";
+}
+
+void alloca_variaveis_locais(FILE* fp, tabela_simbolos_t* ts_fim) {
+    tabela_simbolos_t* aux = ts_fim;
+
+    while (aux) {
+        if (aux->simb->escopo == 1 &&
+            (!strcmp(aux->simb->tipo_simb, "variavel") || !strcmp(aux->simb->tipo_simb, "retorno"))) {
+
+            fprintf(fp, "%%%s = alloca %s\n", aux->simb->nome, converte_tipo(aux->simb->tipo));
+        }
+
+        aux = aux->prev;
+    }
 }
