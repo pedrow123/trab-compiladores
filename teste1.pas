@@ -4,6 +4,5 @@ var z: real;
 function plus (a,b: integer): integer;
 var tes: integer;
 begin
-    tes := 10;
-    plus := a + b
+    tes := 10
 end;

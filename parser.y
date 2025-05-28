@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "tabela_simbolos.h"
+#include "llvm_lib.h"
 #include "compilador.h"
 
 int yylex();
@@ -12,6 +13,7 @@ FILE *log_file, *out_file;
 tabela_simbolos_t* tab_simbolos = NULL;
 int escopo_atual = 0;
 int variaveis_num = 0;
+
 %}
 
 %union {
@@ -54,12 +56,13 @@ DECLARACOES_DE_SUBPROGRAMAS: DECLARACOES_DE_SUBPROGRAMAS DECLARACAO_DE_SUBPROGRA
                            | /* empty */
                            ;
 
-DECLARACAO_DE_SUBPROGRAMA: CABECALHO_DE_SUBPROGRAMA DECLARACOES ENUNCIADO_COMPOSTO {escopo_atual--;}
+DECLARACAO_DE_SUBPROGRAMA: CABECALHO_DE_SUBPROGRAMA DECLARACOES {cria_func(out_file, tab_simbolos);} ENUNCIADO_COMPOSTO {escopo_atual--;}
                          ;
 
 CABECALHO_DE_SUBPROGRAMA: FUNCTION ID
-                        {$1 = insere_lista_simbolo(NULL, cria_simbolo($2, "funcao", escopo_atual)); escopo_atual++;}
-                         ARGUMENTOS DOIS_PONTOS TIPO {atualiza_tipo_simbolos($1, $6); tab_simbolos = insere_simbolos_ts(tab_simbolos, $1);} PONTO_VIRGULA 
+                        {$1 = insere_lista_simbolo(NULL, cria_simbolo($2, "funcao", escopo_atual)); escopo_atual++;
+                        }
+                         ARGUMENTOS DOIS_PONTOS TIPO {atualiza_tipo_simbolos($1, $6); tab_simbolos = insere_simbolos_ts(tab_simbolos, $1);} PONTO_VIRGULA
                         | PROCEDURE ID
                         {$1 = insere_lista_simbolo(NULL, cria_simbolo($2, "procedure", escopo_atual)); tab_simbolos = insere_simbolos_ts(tab_simbolos, $1);}
                         ARGUMENTOS PONTO_VIRGULA 
