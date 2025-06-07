@@ -16,30 +16,30 @@ int escopo_atual = 0;
 int variaveis_num = 0;
 int temp_count = 0;
 
-char* gera_temp() {
-    char* nome = malloc(10);
-    sprintf(nome, "t%d", temp_count++);
-    return nome;
-}
-
 %}
 
 %union {
     struct lista_simbolo* lista_s;
     char *str;
     char* tipo;
+    struct exp* exp;
 }
 
 %token <str> ID
 %token <str> NUM
-%token OPERADOR_MULTIPLICATIVO OR MENOS MAIS OPERADOR_RELACIONAL 
+%token <str> OPERADOR_MULTIPLICATIVO OR MENOS MAIS OPERADOR_RELACIONAL 
 %token OPERADOR_ATRIBUICAO DO WHILE ELSE THEN IF END BEGIN_TOKEN
 %token DOIS_PONTOS PONTO_VIRGULA FECHA_PARENTESES ABRE_PARENTESES
 %token FUNCTION PROCEDURE REAL INTEIRO VAR PONTO_FINAL PROGRAM EOL VIRGULA
 
 %type <lista_s> LISTA_DE_IDENTIFICADORES LISTA_DE_PARAMETROS
 %type <lista_s> FUNCTION PROCEDURE 
-%type <str> FATOR EXPRESSAO EXPRESSAO_SIMPLES TERMO VARIAVEL
+%type <str> VARIAVEL
+%type <exp> FATOR
+%type <exp> TERMO
+%type <exp> LISTA_DE_EXPRESSOES
+%type <exp> EXPRESSAO
+%type <exp> EXPRESSAO_SIMPLES
 %type <tipo> TIPO
 
 %%
@@ -107,7 +107,7 @@ ENUNCIADO: VARIAVEL OPERADOR_ATRIBUICAO EXPRESSAO
         {
             // $1: nome da variável (ex: "tes")
             // $3: nome do temporário com o valor (ex: "%t0")
-            fprintf(out_file, "store i32 %s, ptr %%%s\n", $3, $1);
+            fprintf(out_file, "store i32 %%%d, ptr  %%%s\n", $3->id_temporario, $1);
         }
          | CHAMADA_DE_PROCEDIMENTO
          | ENUNCIADO_COMPOSTO
@@ -130,30 +130,49 @@ EXPRESSAO: EXPRESSAO_SIMPLES
          | EXPRESSAO_SIMPLES OPERADOR_RELACIONAL EXPRESSAO_SIMPLES
          ;
 
-EXPRESSAO_SIMPLES: TERMO
+EXPRESSAO_SIMPLES: TERMO { $$ = $1; }
                  | SINAL TERMO  {
                     $$ = $2; // ignora o sinal por enquanto
                 } 
-                 | EXPRESSAO_SIMPLES MAIS EXPRESSAO_SIMPLES 
-                 | EXPRESSAO_SIMPLES MENOS EXPRESSAO_SIMPLES 
+                 | EXPRESSAO_SIMPLES MAIS EXPRESSAO_SIMPLES {
+                     $$ = cria_expressao_binaria(out_file, $1, $3, "+", &temp_count);
+                 }
+                 | EXPRESSAO_SIMPLES MENOS EXPRESSAO_SIMPLES {
+                     $$ = cria_expressao_binaria(out_file, $1, $3, "-", &temp_count);
+                 }
                  | EXPRESSAO_SIMPLES OR EXPRESSAO_SIMPLES 
                  ;
 
 TERMO: FATOR
-     | TERMO OPERADOR_MULTIPLICATIVO FATOR
+     | TERMO OPERADOR_MULTIPLICATIVO FATOR {
+         $$ = cria_expressao_binaria(out_file, $1, $3, "*", &temp_count);
+     }
      ;
 
-FATOR: ID {
+FATOR:ID {
         simbolo_t* s = busca_simbolo(tab_simbolos, $1);
-        char* temp = gera_temp();
-        fprintf(out_file, "%%%s = load %s, ptr %%%s\n", temp, converte_tipo(s->tipo), $1);
-        $$ = strdup(temp);
+        if (s == NULL) {
+            char erro[256];
+            sprintf(erro, "variável '%s' não declarada", $1);
+            yyerror(erro);
+        }
+        exp_t* e = malloc(sizeof(exp_t));
+        e->nome = strdup($1);
+        e->tipo = "var";
+        e->tipo_llvm = converte_tipo(s->tipo);
+        e->id_temporario = temp_count++;
+        fprintf(out_file, "%%%d = load %s, ptr %%%s\n", e->id_temporario, e->tipo_llvm, $1);
+        $$ = e;
     }
      | ID ABRE_PARENTESES LISTA_DE_EXPRESSOES FECHA_PARENTESES
      | NUM {
-        char* temp = gera_temp();
-        fprintf(out_file, "%%%s = add i32 0, %s\n", temp, $1);  // constante vira temporário
-        $$ = strdup(temp);
+        exp_t* e = malloc(sizeof(exp_t));
+        e->nome = strdup($1);
+        e->tipo = "numero";
+        e->id_temporario = temp_count++;
+        e->tipo_llvm = "i32"; // ajuste se usar float
+        fprintf(out_file, "%%%d = add i32 0, %s\n", e->id_temporario, $1);
+        $$ = e;
     }
      | ABRE_PARENTESES EXPRESSAO FECHA_PARENTESES {
         $$ = $2;

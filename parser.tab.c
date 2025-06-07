@@ -86,14 +86,8 @@ int escopo_atual = 0;
 int variaveis_num = 0;
 int temp_count = 0;
 
-char* gera_temp() {
-    char* nome = malloc(10);
-    sprintf(nome, "t%d", temp_count++);
-    return nome;
-}
 
-
-#line 97 "parser.tab.c"
+#line 91 "parser.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -572,8 +566,8 @@ static const yytype_uint8 yyrline[] =
       62,    65,    66,    69,    69,    73,    75,    72,    77,    76,
       81,    82,    85,    87,    89,    91,    95,    98,    99,   102,
      103,   106,   112,   113,   114,   115,   118,   121,   122,   125,
-     126,   129,   130,   133,   134,   137,   138,   139,   142,   143,
-     146,   152,   153,   158,   163,   164
+     126,   129,   130,   133,   134,   137,   140,   143,   146,   147,
+     152,   167,   168,   177,   182,   183
 };
 #endif
 
@@ -1210,110 +1204,110 @@ yyreduce:
   case 2: /* $@1: %empty  */
 #line 48 "parser.y"
                     {cria_globais(tab_simbolos, out_file); imprime_ts(log_file, tab_simbolos);}
-#line 1214 "parser.tab.c"
+#line 1208 "parser.tab.c"
     break;
 
   case 3: /* $@2: %empty  */
 #line 49 "parser.y"
                                     {imprime_ts(log_file, tab_simbolos);}
-#line 1220 "parser.tab.c"
+#line 1214 "parser.tab.c"
     break;
 
   case 4: /* PROGRAMA: PROGRAM ID ABRE_PARENTESES LISTA_DE_IDENTIFICADORES FECHA_PARENTESES PONTO_VIRGULA DECLARACOES $@1 DECLARACOES_DE_SUBPROGRAMAS $@2  */
 #line 50 "parser.y"
         {destroi_tabela(tab_simbolos);}
-#line 1226 "parser.tab.c"
+#line 1220 "parser.tab.c"
     break;
 
   case 5: /* LISTA_DE_IDENTIFICADORES: ID  */
 #line 53 "parser.y"
                              {(yyval.lista_s) = insere_lista_simbolo(NULL, cria_simbolo((yyvsp[0].str), "variavel", escopo_atual));}
-#line 1232 "parser.tab.c"
+#line 1226 "parser.tab.c"
     break;
 
   case 6: /* LISTA_DE_IDENTIFICADORES: LISTA_DE_IDENTIFICADORES VIRGULA ID  */
 #line 54 "parser.y"
                                                               {(yyval.lista_s) = insere_lista_simbolo((yyvsp[-2].lista_s), cria_simbolo((yyvsp[0].str), "variavel", escopo_atual));}
-#line 1238 "parser.tab.c"
+#line 1232 "parser.tab.c"
     break;
 
   case 7: /* DECLARACOES: DECLARACOES VAR LISTA_DE_IDENTIFICADORES DOIS_PONTOS TIPO PONTO_VIRGULA  */
 #line 57 "parser.y"
                                                                                      {atualiza_tipo_simbolos((yyvsp[-3].lista_s), (yyvsp[-1].tipo)); tab_simbolos = insere_simbolos_ts(tab_simbolos, (yyvsp[-3].lista_s)); }
-#line 1244 "parser.tab.c"
+#line 1238 "parser.tab.c"
     break;
 
   case 9: /* TIPO: INTEIRO  */
 #line 61 "parser.y"
               {(yyval.tipo) = "INTEIRO";}
-#line 1250 "parser.tab.c"
+#line 1244 "parser.tab.c"
     break;
 
   case 10: /* TIPO: REAL  */
 #line 62 "parser.y"
             {(yyval.tipo) = "REAL";}
-#line 1256 "parser.tab.c"
+#line 1250 "parser.tab.c"
     break;
 
   case 11: /* DECLARACOES_DE_SUBPROGRAMAS: DECLARACOES_DE_SUBPROGRAMAS DECLARACAO_DE_SUBPROGRAMA PONTO_VIRGULA  */
 #line 65 "parser.y"
                                                                                                  {imprime_ts(log_file, tab_simbolos); tab_simbolos = destroi_var_locais(tab_simbolos);}
-#line 1262 "parser.tab.c"
+#line 1256 "parser.tab.c"
     break;
 
   case 13: /* $@3: %empty  */
 #line 69 "parser.y"
                                                                 {cria_func(out_file, tab_simbolos);}
-#line 1268 "parser.tab.c"
+#line 1262 "parser.tab.c"
     break;
 
   case 14: /* DECLARACAO_DE_SUBPROGRAMA: CABECALHO_DE_SUBPROGRAMA DECLARACOES $@3 ENUNCIADO_COMPOSTO  */
 #line 69 "parser.y"
                                                                                                                         {escopo_atual--;}
-#line 1274 "parser.tab.c"
+#line 1268 "parser.tab.c"
     break;
 
   case 15: /* $@4: %empty  */
 #line 73 "parser.y"
                         {(yyvsp[-1].lista_s) = insere_lista_simbolo(NULL, cria_simbolo((yyvsp[0].str), "funcao", escopo_atual)); escopo_atual++;
                         }
-#line 1281 "parser.tab.c"
+#line 1275 "parser.tab.c"
     break;
 
   case 16: /* $@5: %empty  */
 #line 75 "parser.y"
                                                      {atualiza_tipo_simbolos((yyvsp[-5].lista_s), (yyvsp[0].tipo)); tab_simbolos = insere_simbolos_ts(tab_simbolos, (yyvsp[-5].lista_s));}
-#line 1287 "parser.tab.c"
+#line 1281 "parser.tab.c"
     break;
 
   case 18: /* $@6: %empty  */
 #line 77 "parser.y"
                         {(yyvsp[-1].lista_s) = insere_lista_simbolo(NULL, cria_simbolo((yyvsp[0].str), "procedure", escopo_atual)); tab_simbolos = insere_simbolos_ts(tab_simbolos, (yyvsp[-1].lista_s));}
-#line 1293 "parser.tab.c"
+#line 1287 "parser.tab.c"
     break;
 
   case 22: /* LISTA_DE_PARAMETROS: LISTA_DE_IDENTIFICADORES DOIS_PONTOS TIPO  */
 #line 86 "parser.y"
                     {atualiza_tipo_simbolos((yyvsp[-2].lista_s), (yyvsp[0].tipo)); atualiza_tipo_novo((yyvsp[-2].lista_s), "parametro"); tab_simbolos = insere_simbolos_ts(tab_simbolos, (yyvsp[-2].lista_s));}
-#line 1299 "parser.tab.c"
+#line 1293 "parser.tab.c"
     break;
 
   case 23: /* LISTA_DE_PARAMETROS: VAR LISTA_DE_IDENTIFICADORES DOIS_PONTOS TIPO  */
 #line 88 "parser.y"
                    {atualiza_tipo_simbolos((yyvsp[-2].lista_s), (yyvsp[0].tipo)); atualiza_tipo_novo((yyvsp[-2].lista_s), "ponteiro"); tab_simbolos = insere_simbolos_ts(tab_simbolos, (yyvsp[-2].lista_s));}
-#line 1305 "parser.tab.c"
+#line 1299 "parser.tab.c"
     break;
 
   case 24: /* LISTA_DE_PARAMETROS: LISTA_DE_PARAMETROS PONTO_VIRGULA LISTA_DE_IDENTIFICADORES DOIS_PONTOS TIPO  */
 #line 90 "parser.y"
                    {atualiza_tipo_simbolos((yyvsp[-2].lista_s), (yyvsp[0].tipo)); atualiza_tipo_novo((yyvsp[-2].lista_s), "parametro"); tab_simbolos = insere_simbolos_ts(tab_simbolos, (yyvsp[-2].lista_s));}
-#line 1311 "parser.tab.c"
+#line 1305 "parser.tab.c"
     break;
 
   case 25: /* LISTA_DE_PARAMETROS: LISTA_DE_PARAMETROS PONTO_VIRGULA VAR LISTA_DE_IDENTIFICADORES DOIS_PONTOS TIPO  */
 #line 92 "parser.y"
                    {atualiza_tipo_simbolos((yyvsp[-2].lista_s), (yyvsp[0].tipo)); atualiza_tipo_novo((yyvsp[-2].lista_s), "ponteiro"); tab_simbolos = insere_simbolos_ts(tab_simbolos, (yyvsp[-2].lista_s));}
-#line 1317 "parser.tab.c"
+#line 1311 "parser.tab.c"
     break;
 
   case 31: /* ENUNCIADO: VARIAVEL OPERADOR_ATRIBUICAO EXPRESSAO  */
@@ -1321,56 +1315,99 @@ yyreduce:
         {
             // $1: nome da variável (ex: "tes")
             // $3: nome do temporário com o valor (ex: "%t0")
-            fprintf(out_file, "store i32 %s, ptr %%%s\n", (yyvsp[0].str), (yyvsp[-2].str));
+            fprintf(out_file, "store i32 %%%d, ptr  %%%s\n", (yyvsp[0].exp)->id_temporario, (yyvsp[-2].str));
         }
-#line 1327 "parser.tab.c"
+#line 1321 "parser.tab.c"
     break;
 
   case 36: /* VARIAVEL: ID  */
 #line 118 "parser.y"
              { (yyval.str) = (yyvsp[0].str); }
+#line 1327 "parser.tab.c"
+    break;
+
+  case 43: /* EXPRESSAO_SIMPLES: TERMO  */
+#line 133 "parser.y"
+                         { (yyval.exp) = (yyvsp[0].exp); }
 #line 1333 "parser.tab.c"
     break;
 
   case 44: /* EXPRESSAO_SIMPLES: SINAL TERMO  */
 #line 134 "parser.y"
                                 {
-                    (yyval.str) = (yyvsp[0].str); // ignora o sinal por enquanto
+                    (yyval.exp) = (yyvsp[0].exp); // ignora o sinal por enquanto
                 }
 #line 1341 "parser.tab.c"
     break;
 
+  case 45: /* EXPRESSAO_SIMPLES: EXPRESSAO_SIMPLES MAIS EXPRESSAO_SIMPLES  */
+#line 137 "parser.y"
+                                                            {
+                     (yyval.exp) = cria_expressao_binaria(out_file, (yyvsp[-2].exp), (yyvsp[0].exp), "+", &temp_count);
+                 }
+#line 1349 "parser.tab.c"
+    break;
+
+  case 46: /* EXPRESSAO_SIMPLES: EXPRESSAO_SIMPLES MENOS EXPRESSAO_SIMPLES  */
+#line 140 "parser.y"
+                                                             {
+                     (yyval.exp) = cria_expressao_binaria(out_file, (yyvsp[-2].exp), (yyvsp[0].exp), "-", &temp_count);
+                 }
+#line 1357 "parser.tab.c"
+    break;
+
+  case 49: /* TERMO: TERMO OPERADOR_MULTIPLICATIVO FATOR  */
+#line 147 "parser.y"
+                                           {
+         (yyval.exp) = cria_expressao_binaria(out_file, (yyvsp[-2].exp), (yyvsp[0].exp), "*", &temp_count);
+     }
+#line 1365 "parser.tab.c"
+    break;
+
   case 50: /* FATOR: ID  */
-#line 146 "parser.y"
-          {
+#line 152 "parser.y"
+         {
         simbolo_t* s = busca_simbolo(tab_simbolos, (yyvsp[0].str));
-        char* temp = gera_temp();
-        fprintf(out_file, "%%%s = load %s, ptr %%%s\n", temp, converte_tipo(s->tipo), (yyvsp[0].str));
-        (yyval.str) = strdup(temp);
+        if (s == NULL) {
+            char erro[256];
+            sprintf(erro, "variável '%s' não declarada", (yyvsp[0].str));
+            yyerror(erro);
+        }
+        exp_t* e = malloc(sizeof(exp_t));
+        e->nome = strdup((yyvsp[0].str));
+        e->tipo = "var";
+        e->tipo_llvm = converte_tipo(s->tipo);
+        e->id_temporario = temp_count++;
+        fprintf(out_file, "%%%d = load %s, ptr %%%s\n", e->id_temporario, e->tipo_llvm, (yyvsp[0].str));
+        (yyval.exp) = e;
     }
-#line 1352 "parser.tab.c"
+#line 1385 "parser.tab.c"
     break;
 
   case 52: /* FATOR: NUM  */
-#line 153 "parser.y"
+#line 168 "parser.y"
            {
-        char* temp = gera_temp();
-        fprintf(out_file, "%%%s = add i32 0, %s\n", temp, (yyvsp[0].str));  // constante vira temporário
-        (yyval.str) = strdup(temp);
+        exp_t* e = malloc(sizeof(exp_t));
+        e->nome = strdup((yyvsp[0].str));
+        e->tipo = "numero";
+        e->id_temporario = temp_count++;
+        e->tipo_llvm = "i32"; // ajuste se usar float
+        fprintf(out_file, "%%%d = add i32 0, %s\n", e->id_temporario, (yyvsp[0].str));
+        (yyval.exp) = e;
     }
-#line 1362 "parser.tab.c"
+#line 1399 "parser.tab.c"
     break;
 
   case 53: /* FATOR: ABRE_PARENTESES EXPRESSAO FECHA_PARENTESES  */
-#line 158 "parser.y"
+#line 177 "parser.y"
                                                   {
-        (yyval.str) = (yyvsp[-1].str);
+        (yyval.exp) = (yyvsp[-1].exp);
     }
-#line 1370 "parser.tab.c"
+#line 1407 "parser.tab.c"
     break;
 
 
-#line 1374 "parser.tab.c"
+#line 1411 "parser.tab.c"
 
       default: break;
     }
@@ -1563,7 +1600,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 166 "parser.y"
+#line 185 "parser.y"
 
 
 

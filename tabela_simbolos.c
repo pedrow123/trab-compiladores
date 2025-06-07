@@ -148,3 +148,63 @@ tabela_simbolos_t* ir_para_fim(tabela_simbolos_t* ts) {
         ts = ts->prox;
     return ts;
 }
+
+exp_t* cria_expressao_binaria(FILE* out_file, exp_t* e1, exp_t* e2, const char* operador, int* temp_count) {
+    char* tipo_llvm = "i32";
+
+    // Carrega variável se necessário
+    // if (strcmp(e1->tipo, "var") == 0) {
+    //     int id = (*temp_count)++;
+    //     fprintf(out_file, "%%%d = load %s, ptr %%%d\n", id, tipo_llvm, e1->id_temporario);
+    //     e1->id_temporario = id;
+    //     strcpy(e1->nome, "exp");
+    //     e1->tipo = "temp";
+    // }
+
+    // if (strcmp(e2->tipo, "var") == 0) {
+    //     int id = (*temp_count)++;
+    //     fprintf(out_file, "%%%d = load %s, ptr %%%d\n", id, tipo_llvm, e2->id_temporario);
+    //     e2->id_temporario = id;
+    //     strcpy(e2->nome, "exp");
+    //     e2->tipo = "temp";
+    // }
+
+    // // Constantes viram temporários usando add 0
+    // if (strcmp(e1->tipo, "numero") == 0) {
+    //     int id = (*temp_count)++;
+    //     fprintf(out_file, "%%%d = add %s 0, %d\n", id, tipo_llvm, e1->id_temporario);
+    //     e1->id_temporario = id;
+    //     strcpy(e1->nome, "exp");
+    //     e1->tipo = "temp";
+    // }
+
+    // if (strcmp(e2->tipo, "numero") == 0) {
+    //     int id = (*temp_count)++;
+    //     fprintf(out_file, "%%%d = add %s 0, %d\n", id, tipo_llvm, e2->id_temporario);
+    //     e2->id_temporario = id;
+    //     strcpy(e2->nome, "exp");
+    //     e2->tipo = "temp";
+    // }
+
+    // Operação binária final
+    int id_result = (*temp_count)++;
+    if (strcmp(operador, "+") == 0)
+        fprintf(out_file, "%%%d = add %s %%%d, %%%d\n", id_result, tipo_llvm, e1->id_temporario, e2->id_temporario);
+    else if (strcmp(operador, "-") == 0)
+        fprintf(out_file, "%%%d = sub %s %%%d, %%%d\n", id_result, tipo_llvm, e1->id_temporario, e2->id_temporario);
+    else if (strcmp(operador, "*") == 0)
+        fprintf(out_file, "%%%d = mul %s %%%d, %%%d\n", id_result, tipo_llvm, e1->id_temporario, e2->id_temporario);
+    else if (strcmp(operador, "/") == 0)
+        fprintf(out_file, "%%%d = sdiv %s %%%d, %%%d\n", id_result, tipo_llvm, e1->id_temporario, e2->id_temporario);
+    else {
+        fprintf(stderr, "Operador binário não suportado: %s\n", operador);
+        exit(1);
+    }
+
+    exp_t* resultado = malloc(sizeof(exp_t));
+    resultado->nome = strdup("exp");
+    resultado->tipo = strdup("temp");
+    resultado->id_temporario = id_result;
+    resultado->tipo_llvm = tipo_llvm;
+    return resultado;
+}

@@ -19,6 +19,14 @@ typedef struct lista_simbolo {
     struct lista_simbolo *prox;
 } lista_simbolo_t;
 
+typedef struct exp {
+    char* nome;            // nome da variável, função, etc (opcional)
+    char* tipo;            // "numero", "var", "funcao", etc
+    int id_temporario;     // número do temporário gerado (LLVM)
+    char* tipo_llvm;       // i32, float, etc
+    
+} exp_t;
+
 simbolo_t * cria_simbolo(char *nome, char* tipo_simb, int escopo);
 
 lista_simbolo_t* insere_lista_simbolo(lista_simbolo_t* lista, simbolo_t* simb);
@@ -44,5 +52,7 @@ void imprime_ts (FILE *fp, tabela_simbolos_t* ts);
 void cria_globais(tabela_simbolos_t* ts, FILE* fp);
 
 tabela_simbolos_t* ir_para_fim(tabela_simbolos_t* ts);
+
+exp_t* cria_expressao_binaria(FILE* out_file, exp_t* e1, exp_t* e2, const char* operador, int* id_atual);
 
 #endif

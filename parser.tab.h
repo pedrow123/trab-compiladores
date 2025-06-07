@@ -90,13 +90,14 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 27 "parser.y"
+#line 21 "parser.y"
 
     struct lista_simbolo* lista_s;
     char *str;
     char* tipo;
+    struct exp* exp;
 
-#line 100 "parser.tab.h"
+#line 101 "parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
