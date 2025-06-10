@@ -5,17 +5,24 @@
 #include "compilador.h"
 
 simbolo_t * cria_simbolo(char *nome, char* tipo_simb, int escopo){
+    if (!nome || !tipo_simb) {
+        fprintf(stderr, "Erro: nome ou tipo_simb nulo ao criar símbolo\n");
+        exit(1);
+    }
     simbolo_t * novo = malloc(sizeof(simbolo_t));
     novo->escopo = escopo;
-    strcpy(novo->tipo, "");
-    strcpy(novo->tipo_simb, tipo_simb);
-    strcpy(novo->nome, nome);
+    novo->tipo = strdup("");                // ou NULL se quiser evitar string vazia
+    novo->tipo_simb = strdup(tipo_simb);    // aloca e copia a string
+    novo->nome = strdup(nome);
     return novo;
 }
 
 lista_simbolo_t* insere_lista_simbolo(lista_simbolo_t* lista, simbolo_t* simb){
     // insere no final
     lista_simbolo_t *aux, *novo = malloc(sizeof(lista_simbolo_t));
+    if(strcmp(simb->tipo_simb, "procedure") == 0){
+        strcpy(simb->tipo, "VOID");
+    }
     novo->simb = simb;
     novo->prox = NULL;
     if(lista == NULL){
@@ -78,8 +85,11 @@ tabela_simbolos_t * insere_simbolos_ts(tabela_simbolos_t * ts, lista_simbolo_t *
 }
 
 simbolo_t * busca_simbolo(tabela_simbolos_t * ts, char *nome){
+    if (ts == NULL) {
+        return NULL;
+    }
     while(ts != NULL){
-        if(strcmp(ts->simb->nome, nome) == 0)
+        if (ts->simb && strcmp(ts->simb->nome, nome) == 0)
             return ts->simb;
         ts = ts->prox;
     }
@@ -150,56 +160,52 @@ tabela_simbolos_t* ir_para_fim(tabela_simbolos_t* ts) {
 }
 
 exp_t* cria_expressao_binaria(FILE* out_file, exp_t* e1, exp_t* e2, const char* operador, int* temp_count) {
-    char* tipo_llvm = "i32";
+    // Verifica compatibilidade de tipo
+    if (strcmp(e1->tipo_llvm, e2->tipo_llvm) != 0) {
+        fprintf(stderr, "Erro: operação entre tipos incompatíveis: %s e %s\n", e1->tipo_llvm, e2->tipo_llvm);
+        exit(1);
+    }
 
-    // Carrega variável se necessário
-    // if (strcmp(e1->tipo, "var") == 0) {
-    //     int id = (*temp_count)++;
-    //     fprintf(out_file, "%%%d = load %s, ptr %%%d\n", id, tipo_llvm, e1->id_temporario);
-    //     e1->id_temporario = id;
-    //     strcpy(e1->nome, "exp");
-    //     e1->tipo = "temp";
-    // }
-
-    // if (strcmp(e2->tipo, "var") == 0) {
-    //     int id = (*temp_count)++;
-    //     fprintf(out_file, "%%%d = load %s, ptr %%%d\n", id, tipo_llvm, e2->id_temporario);
-    //     e2->id_temporario = id;
-    //     strcpy(e2->nome, "exp");
-    //     e2->tipo = "temp";
-    // }
-
-    // // Constantes viram temporários usando add 0
-    // if (strcmp(e1->tipo, "numero") == 0) {
-    //     int id = (*temp_count)++;
-    //     fprintf(out_file, "%%%d = add %s 0, %d\n", id, tipo_llvm, e1->id_temporario);
-    //     e1->id_temporario = id;
-    //     strcpy(e1->nome, "exp");
-    //     e1->tipo = "temp";
-    // }
-
-    // if (strcmp(e2->tipo, "numero") == 0) {
-    //     int id = (*temp_count)++;
-    //     fprintf(out_file, "%%%d = add %s 0, %d\n", id, tipo_llvm, e2->id_temporario);
-    //     e2->id_temporario = id;
-    //     strcpy(e2->nome, "exp");
-    //     e2->tipo = "temp";
-    // }
-
-    // Operação binária final
+    char* tipo_llvm = e1->tipo_llvm;
     int id_result = (*temp_count)++;
-    if (strcmp(operador, "+") == 0)
-        fprintf(out_file, "%%%d = add %s %%%d, %%%d\n", id_result, tipo_llvm, e1->id_temporario, e2->id_temporario);
-    else if (strcmp(operador, "-") == 0)
-        fprintf(out_file, "%%%d = sub %s %%%d, %%%d\n", id_result, tipo_llvm, e1->id_temporario, e2->id_temporario);
-    else if (strcmp(operador, "*") == 0)
-        fprintf(out_file, "%%%d = mul %s %%%d, %%%d\n", id_result, tipo_llvm, e1->id_temporario, e2->id_temporario);
-    else if (strcmp(operador, "/") == 0)
-        fprintf(out_file, "%%%d = sdiv %s %%%d, %%%d\n", id_result, tipo_llvm, e1->id_temporario, e2->id_temporario);
-    else {
+    const char* instr = NULL;
+
+    // Operações aritméticas
+    if (strcmp(operador, "+") == 0) {
+        instr = strcmp(tipo_llvm, "i32") == 0 ? "add i32" : "fadd float";
+    } else if (strcmp(operador, "-") == 0) {
+        instr = strcmp(tipo_llvm, "i32") == 0 ? "sub i32" : "fsub float";
+    } else if (strcmp(operador, "*") == 0) {
+        instr = strcmp(tipo_llvm, "i32") == 0 ? "mul i32" : "fmul float";
+    } else if (strcmp(operador, "/") == 0) {
+        instr = strcmp(tipo_llvm, "i32") == 0 ? "sdiv i32" : "fdiv float";
+    }
+
+    // Operações de comparação
+    else if (strcmp(operador, "=") == 0) {
+        instr = strcmp(tipo_llvm, "i32") == 0 ? "icmp eq"  : "fcmp oeq";
+        tipo_llvm = "i1";
+    } else if (strcmp(operador, "<>") == 0) {
+        instr = strcmp(tipo_llvm, "i32") == 0 ? "icmp ne"  : "fcmp one";
+        tipo_llvm = "i1";
+    } else if (strcmp(operador, "<") == 0) {
+        instr = strcmp(tipo_llvm, "i32") == 0 ? "icmp slt" : "fcmp olt";
+        tipo_llvm = "i1";
+    } else if (strcmp(operador, "<=") == 0) {
+        instr = strcmp(tipo_llvm, "i32") == 0 ? "icmp sle" : "fcmp ole";
+        tipo_llvm = "i1";
+    } else if (strcmp(operador, ">") == 0) {
+        instr = strcmp(tipo_llvm, "i32") == 0 ? "icmp sgt" : "fcmp ogt";
+        tipo_llvm = "i1";
+    } else if (strcmp(operador, ">=") == 0) {
+        instr = strcmp(tipo_llvm, "i32") == 0 ? "icmp sge" : "fcmp oge";
+        tipo_llvm = "i1";
+    } else {
         fprintf(stderr, "Operador binário não suportado: %s\n", operador);
         exit(1);
     }
+
+    fprintf(out_file, "%%%d = %s %%%d, %%%d\n", id_result, instr, e1->id_temporario, e2->id_temporario);
 
     exp_t* resultado = malloc(sizeof(exp_t));
     resultado->nome = strdup("exp");
@@ -207,4 +213,17 @@ exp_t* cria_expressao_binaria(FILE* out_file, exp_t* e1, exp_t* e2, const char* 
     resultado->id_temporario = id_result;
     resultado->tipo_llvm = tipo_llvm;
     return resultado;
+}
+
+exp_t* cria_parametros_funcao(exp_t* raiz, exp_t* nova) {
+    exp_t* raiz_aux = raiz;
+    if (raiz) {
+        while (raiz->prox)
+            raiz = raiz->prox;
+        raiz->prox = nova;
+
+        return raiz_aux;
+    } else {
+        return nova;
+    }
 }

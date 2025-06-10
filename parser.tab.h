@@ -55,18 +55,18 @@ extern int yydebug;
     YYerror = 256,                 /* error  */
     YYUNDEF = 257,                 /* "invalid token"  */
     ID = 258,                      /* ID  */
-    NUM = 259,                     /* NUM  */
-    OPERADOR_MULTIPLICATIVO = 260, /* OPERADOR_MULTIPLICATIVO  */
-    OR = 261,                      /* OR  */
-    MENOS = 262,                   /* MENOS  */
-    MAIS = 263,                    /* MAIS  */
-    OPERADOR_RELACIONAL = 264,     /* OPERADOR_RELACIONAL  */
-    OPERADOR_ATRIBUICAO = 265,     /* OPERADOR_ATRIBUICAO  */
-    DO = 266,                      /* DO  */
-    WHILE = 267,                   /* WHILE  */
-    ELSE = 268,                    /* ELSE  */
-    THEN = 269,                    /* THEN  */
-    IF = 270,                      /* IF  */
+    OPERADOR_RELACIONAL = 259,     /* OPERADOR_RELACIONAL  */
+    NUM = 260,                     /* NUM  */
+    OPERADOR_MULTIPLICATIVO = 261, /* OPERADOR_MULTIPLICATIVO  */
+    OR = 262,                      /* OR  */
+    MENOS = 263,                   /* MENOS  */
+    MAIS = 264,                    /* MAIS  */
+    IF = 265,                      /* IF  */
+    WHILE = 266,                   /* WHILE  */
+    OPERADOR_ATRIBUICAO = 267,     /* OPERADOR_ATRIBUICAO  */
+    DO = 268,                      /* DO  */
+    ELSE = 269,                    /* ELSE  */
+    THEN = 270,                    /* THEN  */
     END = 271,                     /* END  */
     BEGIN_TOKEN = 272,             /* BEGIN_TOKEN  */
     DOIS_PONTOS = 273,             /* DOIS_PONTOS  */
@@ -90,14 +90,15 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 21 "parser.y"
+#line 24 "parser.y"
 
     struct lista_simbolo* lista_s;
-    char *str;
+    char* str;
     char* tipo;
     struct exp* exp;
+    int num;
 
-#line 101 "parser.tab.h"
+#line 102 "parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

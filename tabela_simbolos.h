@@ -2,9 +2,12 @@
 #define TABELA_SIMBOLOS_H
 
 typedef struct simbolo {
-    char nome[100];
-    char tipo[100]; // integer, float
-    char tipo_simb[100]; // variavel, function, procedure
+    char *nome;
+    char *tipo;
+    char *tipo_simb;
+    // char nome[100];
+    // char tipo[100]; // integer, float
+    // char tipo_simb[100]; // variavel, function, procedure
     int escopo;
 } simbolo_t;
 
@@ -24,7 +27,7 @@ typedef struct exp {
     char* tipo;            // "numero", "var", "funcao", etc
     int id_temporario;     // número do temporário gerado (LLVM)
     char* tipo_llvm;       // i32, float, etc
-    
+    struct exp *prox;
 } exp_t;
 
 simbolo_t * cria_simbolo(char *nome, char* tipo_simb, int escopo);
@@ -54,5 +57,7 @@ void cria_globais(tabela_simbolos_t* ts, FILE* fp);
 tabela_simbolos_t* ir_para_fim(tabela_simbolos_t* ts);
 
 exp_t* cria_expressao_binaria(FILE* out_file, exp_t* e1, exp_t* e2, const char* operador, int* id_atual);
+
+exp_t* cria_parametros_funcao(exp_t* raiz, exp_t* nova);
 
 #endif

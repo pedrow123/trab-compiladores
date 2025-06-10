@@ -19,25 +19,25 @@ ID [a-zA-Z][a-zA-Z1-9]*
 "or" { return OR; }
 "-" { return MENOS; }
 "+" { return MAIS; }
-"="|"<>"|">"|">="|"<"|"<=" { return OPERADOR_RELACIONAL; }
+"="|"<>"|">"|">="|"<"|"<=" { yylval.str = strdup(yytext); return OPERADOR_RELACIONAL; }
 ":=" { return OPERADOR_ATRIBUICAO; }
-"do" { printf("TOKEN: do\n"); return DO; }
-"while" { printf("TOKEN: while\n"); return WHILE; }
+"do" { return DO; }
+"while" { return WHILE; }
 "else" { return ELSE; }
 "then" { return THEN; }
-"if" { printf("TOKEN: if\n"); return IF; }
+"if" { return IF; }
 "end" { return END; }
 "begin" { return BEGIN_TOKEN; }
 ":" { return DOIS_PONTOS; }
-"program" { printf("TOKEN: programa\n");return PROGRAM; }
-";" { printf("TOKEN: pv\n"); return PONTO_VIRGULA; }
-"var" { printf("TOKEN: var\n"); return VAR; }
+"program" { return PROGRAM; }
+";" { return PONTO_VIRGULA; }
+"var" { return VAR; }
 ")" { return FECHA_PARENTESES; }
 "(" { return ABRE_PARENTESES; }
 "procedure" { printf("TOKEN: procedure\n"); return PROCEDURE; }
 "function" { return FUNCTION; }
 "real" { return REAL; }
-"integer" { printf("TOKEN: INTEIRO\n"); return INTEIRO; }
+"integer" { return INTEIRO; }
 "." { return PONTO_FINAL; }
 "," { return VIRGULA; }
 {ID} { 

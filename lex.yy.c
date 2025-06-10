@@ -851,7 +851,7 @@ YY_RULE_SETUP
 case 6:
 YY_RULE_SETUP
 #line 22 "compilador.l"
-{ return OPERADOR_RELACIONAL; }
+{ yylval.str = strdup(yytext); return OPERADOR_RELACIONAL; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
@@ -861,12 +861,12 @@ YY_RULE_SETUP
 case 8:
 YY_RULE_SETUP
 #line 24 "compilador.l"
-{ printf("TOKEN: do\n"); return DO; }
+{ return DO; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
 #line 25 "compilador.l"
-{ printf("TOKEN: while\n"); return WHILE; }
+{ return WHILE; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
@@ -881,7 +881,7 @@ YY_RULE_SETUP
 case 12:
 YY_RULE_SETUP
 #line 28 "compilador.l"
-{ printf("TOKEN: if\n"); return IF; }
+{ return IF; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
@@ -901,17 +901,17 @@ YY_RULE_SETUP
 case 16:
 YY_RULE_SETUP
 #line 32 "compilador.l"
-{ printf("TOKEN: programa\n");return PROGRAM; }
+{ return PROGRAM; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
 #line 33 "compilador.l"
-{ printf("TOKEN: pv\n"); return PONTO_VIRGULA; }
+{ return PONTO_VIRGULA; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
 #line 34 "compilador.l"
-{ printf("TOKEN: var\n"); return VAR; }
+{ return VAR; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
@@ -941,7 +941,7 @@ YY_RULE_SETUP
 case 24:
 YY_RULE_SETUP
 #line 40 "compilador.l"
-{ printf("TOKEN: INTEIRO\n"); return INTEIRO; }
+{ return INTEIRO; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP

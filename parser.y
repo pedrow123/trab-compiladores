@@ -16,19 +16,25 @@ int escopo_atual = 0;
 int variaveis_num = 0;
 int temp_count = 0;
 
+int dentro_de_funcao = 0;
+
+int if_count = 0;
 %}
 
 %union {
     struct lista_simbolo* lista_s;
-    char *str;
+    char* str;
     char* tipo;
     struct exp* exp;
+    int num;
 }
 
 %token <str> ID
+%token <str> OPERADOR_RELACIONAL 
 %token <str> NUM
-%token <str> OPERADOR_MULTIPLICATIVO OR MENOS MAIS OPERADOR_RELACIONAL 
-%token OPERADOR_ATRIBUICAO DO WHILE ELSE THEN IF END BEGIN_TOKEN
+%token <str> OPERADOR_MULTIPLICATIVO OR MENOS MAIS 
+%token <num> IF WHILE
+%token OPERADOR_ATRIBUICAO DO ELSE THEN END BEGIN_TOKEN
 %token DOIS_PONTOS PONTO_VIRGULA FECHA_PARENTESES ABRE_PARENTESES
 %token FUNCTION PROCEDURE REAL INTEIRO VAR PONTO_FINAL PROGRAM EOL VIRGULA
 
@@ -42,12 +48,19 @@ int temp_count = 0;
 %type <exp> EXPRESSAO_SIMPLES
 %type <tipo> TIPO
 
+%left '+' '-'
+%left '*' '/'
+
 %%
 
 PROGRAMA: PROGRAM ID ABRE_PARENTESES LISTA_DE_IDENTIFICADORES FECHA_PARENTESES PONTO_VIRGULA
         DECLARACOES {cria_globais(tab_simbolos, out_file); imprime_ts(log_file, tab_simbolos);}
-        DECLARACOES_DE_SUBPROGRAMAS {imprime_ts(log_file, tab_simbolos);}
+        DECLARACOES_DE_SUBPROGRAMAS {imprime_ts(log_file, tab_simbolos);
+        fprintf(out_file, "\n\ndefine i32 @main(){\nentry:\n");
+        }
         {destroi_tabela(tab_simbolos);}
+        ENUNCIADO_COMPOSTO 
+        PONTO_FINAL {fprintf(out_file, "ret i32 0\n}");}
         ;
 
 LISTA_DE_IDENTIFICADORES: ID {$$ = insere_lista_simbolo(NULL, cria_simbolo($1, "variavel", escopo_atual));}
@@ -66,16 +79,35 @@ DECLARACOES_DE_SUBPROGRAMAS: DECLARACOES_DE_SUBPROGRAMAS DECLARACAO_DE_SUBPROGRA
                            | /* empty */
                            ;
 
-DECLARACAO_DE_SUBPROGRAMA: CABECALHO_DE_SUBPROGRAMA DECLARACOES {cria_func(out_file, tab_simbolos);} ENUNCIADO_COMPOSTO {escopo_atual--;}
+DECLARACAO_DE_SUBPROGRAMA: CABECALHO_DE_SUBPROGRAMA DECLARACOES {cria_func(out_file, tab_simbolos);} ENUNCIADO_COMPOSTO 
+    {
+        if (dentro_de_funcao) {
+            int temp_id = temp_count++;
+            ret_funcao(temp_id, tab_simbolos);
+            dentro_de_funcao = 0;
+        }
+        fprintf(out_file, "}"); 
+        escopo_atual--;
+    }
                          ;
 
 CABECALHO_DE_SUBPROGRAMA: FUNCTION ID
-                        {$1 = insere_lista_simbolo(NULL, cria_simbolo($2, "funcao", escopo_atual)); escopo_atual++;
+                        {
+                            $1 = insere_lista_simbolo(NULL, cria_simbolo($2, "funcao", escopo_atual)); 
+                            escopo_atual++;
+                            simbolo_t* retorno = cria_simbolo($2, "retorno", escopo_atual);
+                            $1 = insere_lista_simbolo($1, retorno);
+
+                            dentro_de_funcao = 1;
                         }
-                         ARGUMENTOS DOIS_PONTOS TIPO {atualiza_tipo_simbolos($1, $6); tab_simbolos = insere_simbolos_ts(tab_simbolos, $1);} PONTO_VIRGULA
+                         ARGUMENTOS DOIS_PONTOS TIPO {
+                            atualiza_tipo_simbolos($1, $6); 
+                            tab_simbolos = insere_simbolos_ts(tab_simbolos, $1);
+                        } 
+                        PONTO_VIRGULA
                         | PROCEDURE ID
-                        {$1 = insere_lista_simbolo(NULL, cria_simbolo($2, "procedure", escopo_atual)); tab_simbolos = insere_simbolos_ts(tab_simbolos, $1);}
-                        ARGUMENTOS PONTO_VIRGULA 
+                        {$1 = insere_lista_simbolo(NULL, cria_simbolo($2, "procedure", escopo_atual)); escopo_atual++;}
+                        ARGUMENTOS {tab_simbolos = insere_simbolos_ts(tab_simbolos, $1);} PONTO_VIRGULA 
                         ;
 
 ARGUMENTOS: ABRE_PARENTESES LISTA_DE_PARAMETROS FECHA_PARENTESES
@@ -103,31 +135,40 @@ LISTA_DE_ENUNCIADOS: ENUNCIADO
                    | LISTA_DE_ENUNCIADOS PONTO_VIRGULA ENUNCIADO
                    ;
 
-ENUNCIADO: VARIAVEL OPERADOR_ATRIBUICAO EXPRESSAO
-        {
-            // $1: nome da variável (ex: "tes")
-            // $3: nome do temporário com o valor (ex: "%t0")
-            fprintf(out_file, "store i32 %%%d, ptr  %%%s\n", $3->id_temporario, $1);
+ENUNCIADO: VARIAVEL OPERADOR_ATRIBUICAO EXPRESSAO {
+            if (!strcmp($3->tipo_llvm, "i32")) {
+                fprintf(out_file, "store i32 %%%d, ptr %%%s\n", $3->id_temporario, $1);
+            } else if (!strcmp($3->tipo_llvm, "float")) {
+                fprintf(out_file, "store float %%%d, ptr %%%s\n", $3->id_temporario, $1);
+            } else {
+                fprintf(stderr, "Tipo LLVM não suportado na atribuição: %s\n", $3->tipo_llvm);
+                exit(1);
+            }
         }
          | CHAMADA_DE_PROCEDIMENTO
          | ENUNCIADO_COMPOSTO
-         | IF EXPRESSAO THEN ENUNCIADO ELSE ENUNCIADO
+         | IF EXPRESSAO {
+            if_count++;
+            cria_if(out_file, $2, if_count);
+            $1 = if_count;
+        }
+         THEN ENUNCIADO {cria_fim_then(out_file, $1);} ELSE ENUNCIADO {cria_fim_else(out_file, $1);}
          | WHILE EXPRESSAO DO ENUNCIADO 
          ;
 
-VARIAVEL: ID { $$ = $1; }
+VARIAVEL: ID 
         ;
 
 CHAMADA_DE_PROCEDIMENTO: ID
                     | ID ABRE_PARENTESES LISTA_DE_EXPRESSOES FECHA_PARENTESES
                     ;
 
-LISTA_DE_EXPRESSOES: EXPRESSAO
-                   | LISTA_DE_EXPRESSOES VIRGULA EXPRESSAO
+LISTA_DE_EXPRESSOES: EXPRESSAO {$$ = cria_parametros_funcao(NULL, $1);}
+                   | LISTA_DE_EXPRESSOES VIRGULA EXPRESSAO {$$ = cria_parametros_funcao($1, $3);}
                    ;
 
-EXPRESSAO: EXPRESSAO_SIMPLES
-         | EXPRESSAO_SIMPLES OPERADOR_RELACIONAL EXPRESSAO_SIMPLES
+EXPRESSAO: EXPRESSAO_SIMPLES {$$ = $1;}
+         | EXPRESSAO_SIMPLES OPERADOR_RELACIONAL EXPRESSAO_SIMPLES { $$ = cria_expressao_binaria(out_file, $1, $3, $2, &temp_count); temp_count++;}
          ;
 
 EXPRESSAO_SIMPLES: TERMO { $$ = $1; }
@@ -150,6 +191,28 @@ TERMO: FATOR
      ;
 
 FATOR:ID {
+        if (tab_simbolos == NULL) {
+            fprintf(stderr, "Erro interno: tabela de símbolos não inicializada\n");
+            exit(1);
+        }
+        simbolo_t* s = busca_simbolo(tab_simbolos, $1);
+        if (s == NULL) {
+            char erro[256];
+            sprintf(erro, "variável '%s' não declarada", $1);
+            yyerror(erro);
+        }
+        if(strcmp("var", s->tipo_simb) == 0 || strcmp("parametro", s->tipo_simb) == 0 || strcmp("ponteiro", s->tipo_simb) == 0){
+
+            exp_t* e = malloc(sizeof(exp_t));
+            e->nome = strdup($1);
+            e->tipo = "var";
+            e->tipo_llvm = converte_tipo(s->tipo);
+            e->id_temporario = temp_count++;
+            fprintf(out_file, "%%%d = load %s, ptr %%%s\n", e->id_temporario, e->tipo_llvm, $1);
+            $$ = e;
+        }
+    }
+     | ID ABRE_PARENTESES LISTA_DE_EXPRESSOES FECHA_PARENTESES {
         simbolo_t* s = busca_simbolo(tab_simbolos, $1);
         if (s == NULL) {
             char erro[256];
@@ -158,20 +221,34 @@ FATOR:ID {
         }
         exp_t* e = malloc(sizeof(exp_t));
         e->nome = strdup($1);
-        e->tipo = "var";
+        e->tipo = "funcao";
         e->tipo_llvm = converte_tipo(s->tipo);
         e->id_temporario = temp_count++;
-        fprintf(out_file, "%%%d = load %s, ptr %%%s\n", e->id_temporario, e->tipo_llvm, $1);
+
+        cria_chamada_funcao(out_file, $3, e, tab_simbolos, temp_count);
+        // fprintf(out_file, "%%%d = load %s, ptr %%%s\n", e->id_temporario, e->tipo_llvm, $1);
+        
+        
         $$ = e;
-    }
-     | ID ABRE_PARENTESES LISTA_DE_EXPRESSOES FECHA_PARENTESES
+     }
      | NUM {
         exp_t* e = malloc(sizeof(exp_t));
-        e->nome = strdup($1);
-        e->tipo = "numero";
-        e->id_temporario = temp_count++;
-        e->tipo_llvm = "i32"; // ajuste se usar float
-        fprintf(out_file, "%%%d = add i32 0, %s\n", e->id_temporario, $1);
+
+        // Detecta se $1 contém ponto decimal → float
+        if (strchr($1, '.')) {
+            e->tipo = strdup("numero");
+            e->tipo_llvm = strdup("float");
+            e->nome = strdup($1);
+            e->id_temporario = temp_count++;
+            fprintf(out_file, "%%%d = fadd float 0.0, %s\n", e->id_temporario, $1);
+        } else {
+            e->tipo = strdup("numero");
+            e->tipo_llvm = strdup("i32");
+            e->nome = strdup($1);
+            e->id_temporario = temp_count++;
+            fprintf(out_file, "%%%d = add i32 0, %s\n", e->id_temporario, $1);
+        }
+
         $$ = e;
     }
      | ABRE_PARENTESES EXPRESSAO FECHA_PARENTESES {
