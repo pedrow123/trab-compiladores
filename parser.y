@@ -58,9 +58,9 @@ PROGRAMA: PROGRAM ID ABRE_PARENTESES LISTA_DE_IDENTIFICADORES FECHA_PARENTESES P
         DECLARACOES_DE_SUBPROGRAMAS {imprime_ts(log_file, tab_simbolos);
         fprintf(out_file, "\n\ndefine i32 @main(){\nentry:\n");
         }
-        {destroi_tabela(tab_simbolos);}
         ENUNCIADO_COMPOSTO 
-        PONTO_FINAL {fprintf(out_file, "ret i32 0\n}");}
+        PONTO_FINAL {fprintf(out_file, "ret i32 0\n}");
+        destroi_tabela(tab_simbolos);}
         ;
 
 LISTA_DE_IDENTIFICADORES: ID {$$ = insere_lista_simbolo(NULL, cria_simbolo($1, "variavel", escopo_atual));}
@@ -191,6 +191,7 @@ TERMO: FATOR
      ;
 
 FATOR:ID {
+        // imprime_tabela_debug(tab_simbolos); 
         if (tab_simbolos == NULL) {
             fprintf(stderr, "Erro interno: tabela de símbolos não inicializada\n");
             exit(1);
@@ -201,15 +202,25 @@ FATOR:ID {
             sprintf(erro, "variável '%s' não declarada", $1);
             yyerror(erro);
         }
-        if(strcmp("var", s->tipo_simb) == 0 || strcmp("parametro", s->tipo_simb) == 0 || strcmp("ponteiro", s->tipo_simb) == 0){
+        if(strcmp("variavel", s->tipo_simb) == 0 || strcmp("parametro", s->tipo_simb) == 0 || strcmp("ponteiro", s->tipo_simb) == 0){
 
             exp_t* e = malloc(sizeof(exp_t));
             e->nome = strdup($1);
-            e->tipo = "var";
+            e->prox = NULL;
+            e->tipo = "variavel";
             e->tipo_llvm = converte_tipo(s->tipo);
             e->id_temporario = temp_count++;
             fprintf(out_file, "%%%d = load %s, ptr %%%s\n", e->id_temporario, e->tipo_llvm, $1);
             $$ = e;
+        } else {
+            // CORREÇÃO: Tratar outros casos ou lançar erro
+            // Se um ID de função puder ser usado como uma expressão, trate aqui.
+            // Por enquanto, vamos lançar um erro para encontrar o problema.
+            char erro[256];
+            sprintf(erro, "uso inválido do identificador '%s' como expressão", $1);
+            yyerror(erro);
+            // Ou, se for um erro silencioso, garanta que $$ seja nulo
+            // $$ = NULL; 
         }
     }
      | ID ABRE_PARENTESES LISTA_DE_EXPRESSOES FECHA_PARENTESES {
@@ -221,10 +232,11 @@ FATOR:ID {
         }
         exp_t* e = malloc(sizeof(exp_t));
         e->nome = strdup($1);
+        e->prox = NULL;
         e->tipo = "funcao";
         e->tipo_llvm = converte_tipo(s->tipo);
         e->id_temporario = temp_count++;
-
+        imprime_tabela_debug(tab_simbolos);
         cria_chamada_funcao(out_file, $3, e, tab_simbolos, temp_count);
         // fprintf(out_file, "%%%d = load %s, ptr %%%s\n", e->id_temporario, e->tipo_llvm, $1);
         

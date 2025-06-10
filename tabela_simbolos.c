@@ -89,48 +89,84 @@ simbolo_t * busca_simbolo(tabela_simbolos_t * ts, char *nome){
         return NULL;
     }
     while(ts != NULL){
-        if (ts->simb && strcmp(ts->simb->nome, nome) == 0)
+        if (ts->simb && ts->simb->nome && strcmp(ts->simb->nome, nome) == 0)
             return ts->simb;
         ts = ts->prox;
     }
     return NULL;
 }
 
-tabela_simbolos_t * destroi_tabela(tabela_simbolos_t * ts){
-    tabela_simbolos_t * aux;
-    while(ts != NULL){
-        free(ts->simb);
-        aux = ts;
-        ts = ts->prox;
-        free(aux);
+void destroi_tabela(tabela_simbolos_t* ts) {
+    tabela_simbolos_t* atual = ts;
+    tabela_simbolos_t* proximo = NULL;
+
+    while (atual != NULL) {
+        // 1. Guarda o ponteiro para o próximo nó ANTES de liberar o atual
+        proximo = atual->prox;
+
+        // 2. Libera o conteúdo do símbolo (de dentro para fora)
+        if (atual->simb != NULL) {
+            // Libera as strings que foram alocadas dinamicamente com strdup
+            free(atual->simb->nome);
+            free(atual->simb->tipo);
+            free(atual->simb->tipo_simb);
+            
+            // SÓ AGORA libera a própria estrutura do símbolo
+            free(atual->simb);
+        }
+
+        // 3. Libera o nó da lista
+        free(atual);
+
+        // 4. Avança para o próximo nó que foi salvo anteriormente
+        atual = proximo;
     }
-    return ts;
 }
 
 tabela_simbolos_t* destroi_var_locais(tabela_simbolos_t* ts) {
     tabela_simbolos_t* atual = ts;
-    tabela_simbolos_t* anterior = NULL;
 
     while (atual != NULL) {
-        if (atual->simb->escopo == 1) {
-            tabela_simbolos_t* temp = atual;
+        // Verifica se o escopo é local (1)
+        if (atual->simb && atual->simb->escopo == 1) {
+            tabela_simbolos_t* para_remover = atual;
+            
+            // Pega os vizinhos antes de modificar
+            tabela_simbolos_t* anterior = para_remover->prev;
+            tabela_simbolos_t* proximo = para_remover->prox;
+
             if (anterior == NULL) {
-                // Removendo o primeiro elemento da lista
-                ts = atual->prox;
-                atual = ts;
+                // Estamos removendo o primeiro elemento (a cabeça da lista)
+                ts = proximo; // A nova cabeça é o próximo
             } else {
-                anterior->prox = atual->prox;
-                atual = atual->prox;
+                // Estamos removendo do meio ou do fim
+                anterior->prox = proximo;
             }
-            free(temp->simb);
-            free(temp);
+
+            if (proximo != NULL) {
+                // NOVO E CRUCIAL: Ajusta o ponteiro 'prev' do nó seguinte
+                proximo->prev = anterior;
+            }
+
+            // Avança o 'atual' para o próximo nó ANTES de liberar a memória
+            atual = proximo;
+
+            // CORREÇÃO: Liberar os campos alocados com strdup() primeiro
+            if (para_remover->simb) {
+                free(para_remover->simb->nome);
+                free(para_remover->simb->tipo);
+                free(para_remover->simb->tipo_simb);
+                free(para_remover->simb); // Agora libera a struct do símbolo
+            }
+            free(para_remover); // E finalmente, libera o nó da lista
+
         } else {
-            anterior = atual;
+            // Se não removeu, apenas avança para o próximo
             atual = atual->prox;
         }
     }
 
-    return ts;
+    return ts; // Retorna a nova cabeça da lista (pode ter mudado)
 }
 
 void imprime_ts (FILE *fp, tabela_simbolos_t* ts) {
@@ -226,4 +262,27 @@ exp_t* cria_parametros_funcao(exp_t* raiz, exp_t* nova) {
     } else {
         return nova;
     }
+}
+
+// Função para imprimir o estado da tabela de símbolos para depuração
+void imprime_tabela_debug(tabela_simbolos_t * ts) {
+    printf("\n--- ESTADO DA TABELA DE SÍMBOLOS ---\n");
+    tabela_simbolos_t * atual = ts;
+    int i = 0;
+    while (atual != NULL) {
+        printf("Nó %d: Endereço do nó (ts): %p, ", i, (void*)atual);
+        if (atual->simb) {
+            printf("Endereço do símbolo (ts->simb): %p, ", (void*)atual->simb);
+            if (atual->simb->nome) {
+                printf("Nome: '%s', Escopo: %d\n", atual->simb->nome, atual->simb->escopo);
+            } else {
+                printf("Nome: (NULL)\n");
+            }
+        } else {
+            printf("Símbolo (ts->simb): (NULL)\n");
+        }
+        atual = atual->prox;
+        i++;
+    }
+    printf("--- FIM DO ESTADO ---\n\n");
 }

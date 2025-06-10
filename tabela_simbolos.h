@@ -46,7 +46,7 @@ tabela_simbolos_t * insere_simbolos_ts(tabela_simbolos_t * ts, lista_simbolo_t *
 
 simbolo_t * busca_simbolo(tabela_simbolos_t * ts, char *nome);
 
-tabela_simbolos_t * destroi_tabela(tabela_simbolos_t * ts);
+void destroi_tabela(tabela_simbolos_t * ts);
 
 tabela_simbolos_t* destroi_var_locais(tabela_simbolos_t* ts);
 
@@ -59,5 +59,7 @@ tabela_simbolos_t* ir_para_fim(tabela_simbolos_t* ts);
 exp_t* cria_expressao_binaria(FILE* out_file, exp_t* e1, exp_t* e2, const char* operador, int* id_atual);
 
 exp_t* cria_parametros_funcao(exp_t* raiz, exp_t* nova);
+
+void imprime_tabela_debug(tabela_simbolos_t * ts);
 
 #endif

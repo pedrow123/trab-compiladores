@@ -129,6 +129,10 @@ void cria_chamada_funcao(FILE* fp, exp_t* parametros, exp_t* func, tabela_simbol
         sprintf(erro, "Função '%s' não foi declarada anteriormente!", func->nome);
         yyerror(erro);
     }
+    printf("%s\n", ts_func->simb->nome);
+    printf("%s\n", ts_func->prox->simb->nome);
+
+    imprime_tabela_debug(ts);
 
     fprintf(fp, "%%%d := call %s @%s(", temp_count, converte_tipo(ts_func->simb->tipo), func->nome);
 
@@ -139,9 +143,10 @@ void cria_chamada_funcao(FILE* fp, exp_t* parametros, exp_t* func, tabela_simbol
     while (aux && (strcmp(aux->simb->tipo_simb, "parametro") == 0 || strcmp(aux->simb->tipo_simb, "ponteiro") == 0)) {
         params[count++] = aux;
         aux = aux->prox;
+        printf("%d %s\n", count, params[count-1]->simb->nome);
     }
 
-    printf("%d", count);
+    printf("AAAAAAAAAAAAAAAA %d", count);
 
     for (int i = count - 1; i >= 0; i--) {
         if (!parametros) {
@@ -162,8 +167,7 @@ void cria_chamada_funcao(FILE* fp, exp_t* parametros, exp_t* func, tabela_simbol
         }
 
         fprintf(fp, "%s %%%d", converte_tipo(parametros->tipo_llvm), parametros->id_temporario);
-        if (i > 1 &&
-            (strcmp(params[i-1]->simb->tipo_simb, "parametro") == 0 || strcmp(params[i-1]->simb->tipo_simb, "ponteiro") == 0)) {
+        if (i > 0) {
             fprintf(fp, ", ");
         }
 
