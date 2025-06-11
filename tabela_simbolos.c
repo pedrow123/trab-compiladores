@@ -14,6 +14,7 @@ simbolo_t * cria_simbolo(char *nome, char* tipo_simb, int escopo){
     novo->tipo = strdup("");                // ou NULL se quiser evitar string vazia
     novo->tipo_simb = strdup(tipo_simb);    // aloca e copia a string
     novo->nome = strdup(nome);
+    novo->lista_de_parametros = NULL;
     return novo;
 }
 
@@ -77,9 +78,11 @@ tabela_simbolos_t * cria_novo_simbolo_ts(tabela_simbolos_t * ts, simbolo_t * sim
 tabela_simbolos_t * insere_simbolos_ts(tabela_simbolos_t * ts, lista_simbolo_t * lista){
     lista_simbolo_t * aux = lista;
     while(aux != NULL){
+        // printf("%s\n", aux->simb->nome);
         ts = cria_novo_simbolo_ts(ts, aux->simb);
         aux = aux->prox;
     }
+    // printf("---------------------FIM PARAMS------------------------\n");
     free_lista_simbolo(lista);
     return ts;
 }
@@ -285,4 +288,36 @@ void imprime_tabela_debug(tabela_simbolos_t * ts) {
         i++;
     }
     printf("--- FIM DO ESTADO ---\n\n");
+}
+
+void insere_parametros_funcao(tabela_simbolos_t* ts){
+    tabela_simbolos_t* func = ts;
+    while(func->simb->escopo == 1){
+        func = func->prox;
+    }
+        
+    int count = 0;
+    tabela_simbolos_t* params[64];
+
+    tabela_simbolos_t* aux = func->prox;  // pula o símbolo da função
+
+    while (aux && (strcmp(aux->simb->tipo_simb, "parametro") == 0 || strcmp(aux->simb->tipo_simb, "ponteiro") == 0)) {
+        params[count++] = aux;
+        aux = aux->prox;
+    }
+    
+    for(int i = count-1; i >= 0; i--){
+        func->simb->lista_de_parametros = insere_lista_simbolo(
+            func->simb->lista_de_parametros, 
+            params[i]->simb
+        );
+        
+    }
+    printf("Lista de Parâmetros------------------------- FUNÇÃO: %s\n", func->simb->nome);
+    lista_simbolo_t* lista_aux = func->simb->lista_de_parametros;
+    while(lista_aux != NULL){
+        printf("%s\n", lista_aux->simb->nome);
+        lista_aux = lista_aux->prox;
+    }
+    printf("FIM---------------------------------------\n");
 }

@@ -103,6 +103,8 @@ CABECALHO_DE_SUBPROGRAMA: FUNCTION ID
                          ARGUMENTOS DOIS_PONTOS TIPO {
                             atualiza_tipo_simbolos($1, $6); 
                             tab_simbolos = insere_simbolos_ts(tab_simbolos, $1);
+                            insere_parametros_funcao(tab_simbolos);
+                            imprime_tabela_debug(tab_simbolos);
                         } 
                         PONTO_VIRGULA
                         | PROCEDURE ID
@@ -236,7 +238,6 @@ FATOR:ID {
         e->tipo = "funcao";
         e->tipo_llvm = converte_tipo(s->tipo);
         e->id_temporario = temp_count++;
-        imprime_tabela_debug(tab_simbolos);
         cria_chamada_funcao(out_file, $3, e, tab_simbolos, temp_count);
         // fprintf(out_file, "%%%d = load %s, ptr %%%s\n", e->id_temporario, e->tipo_llvm, $1);
         

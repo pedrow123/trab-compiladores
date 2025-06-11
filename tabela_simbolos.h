@@ -9,6 +9,7 @@ typedef struct simbolo {
     // char tipo[100]; // integer, float
     // char tipo_simb[100]; // variavel, function, procedure
     int escopo;
+    struct lista_simbolo* lista_de_parametros;
 } simbolo_t;
 
 typedef struct tabela_simbolo {
@@ -61,5 +62,7 @@ exp_t* cria_expressao_binaria(FILE* out_file, exp_t* e1, exp_t* e2, const char* 
 exp_t* cria_parametros_funcao(exp_t* raiz, exp_t* nova);
 
 void imprime_tabela_debug(tabela_simbolos_t * ts);
+
+void insere_parametros_funcao(tabela_simbolos_t* ts);
 
 #endif

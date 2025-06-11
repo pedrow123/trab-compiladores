@@ -22,4 +22,6 @@ define i32 @main(){
 entry:
 %4 = load i32, ptr %x
 %5 = load i32, ptr %y
-%7 := call i32 @plus(
+store i32 %6, ptr %z
+ret i32 0
+}

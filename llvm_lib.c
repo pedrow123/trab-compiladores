@@ -123,61 +123,50 @@ tabela_simbolos_t * busca_funcao_ts(tabela_simbolos_t * ts, char *nome){
 }
 
 void cria_chamada_funcao(FILE* fp, exp_t* parametros, exp_t* func, tabela_simbolos_t* ts, int temp_count){
-    tabela_simbolos_t* ts_func = busca_funcao_ts(ts, func->nome);
-    if (!ts_func) {
-        char erro[256];
-        sprintf(erro, "Função '%s' não foi declarada anteriormente!", func->nome);
-        yyerror(erro);
-    }
-    printf("%s\n", ts_func->simb->nome);
-    printf("%s\n", ts_func->prox->simb->nome);
 
-    imprime_tabela_debug(ts);
-
-    fprintf(fp, "%%%d := call %s @%s(", temp_count, converte_tipo(ts_func->simb->tipo), func->nome);
-
-    tabela_simbolos_t* aux = ts_func->prox;  // pula o símbolo da função
-    tabela_simbolos_t* params[64];
-    int count = 0;
-
-    while (aux && (strcmp(aux->simb->tipo_simb, "parametro") == 0 || strcmp(aux->simb->tipo_simb, "ponteiro") == 0)) {
-        params[count++] = aux;
-        aux = aux->prox;
-        printf("%d %s\n", count, params[count-1]->simb->nome);
-    }
-
-    printf("AAAAAAAAAAAAAAAA %d", count);
-
-    for (int i = count - 1; i >= 0; i--) {
-        if (!parametros) {
-            yyerror("Faltam argumentos na chamada da função.");
-            break;
+    // --- Bloco de Debug 1: Inspecionando os Argumentos da CHAMADA (x, y) ---
+    printf("\n--- DEBUG: Inspecionando Argumentos na Chamada da Função '%s' ---\n", func->nome);
+    exp_t* arg_atual = parametros;
+    int arg_num = 0;
+    if (arg_atual == NULL) {
+        printf("  -> Nenhum argumento foi passado para a função.\n");
+    } else {
+        while (arg_atual != NULL) {
+            printf("  Argumento #%d:\n", arg_num);
+            printf("    -> nome:        '%s'\n", arg_atual->nome ? arg_atual->nome : "(null)");
+            printf("    -> tipo:        '%s'\n", arg_atual->tipo ? arg_atual->tipo : "(null)");
+            printf("    -> tipo_llvm:   '%s'\n", arg_atual->tipo_llvm ? arg_atual->tipo_llvm : "(null)");
+            arg_atual = arg_atual->prox;
+            arg_num++;
         }
-
-        if (strcmp(params[i]->simb->tipo, parametros->tipo) != 0) {
-            char erro[256];
-            sprintf(erro, "Tipo do parâmetro '%s' não corresponde ao argumento '%s'.", params[i]->simb->nome, parametros->nome);
-            yyerror(erro);
-        }
-
-        if (strcmp(params[i]->simb->tipo_simb, "ponteiro") == 0 && strcmp(parametros->tipo, "var") != 0) {
-            char erro[256];
-            sprintf(erro, "Parâmetro '%s' é por referência, mas o argumento não é uma variável!", params[i]->simb->nome);
-            yyerror(erro);
-        }
-
-        fprintf(fp, "%s %%%d", converte_tipo(parametros->tipo_llvm), parametros->id_temporario);
-        if (i > 0) {
-            fprintf(fp, ", ");
-        }
-
-        parametros = parametros->prox;
-
     }
+    printf("--- FIM DA INSPEÇÃO DE ARGUMENTOS ---\n\n");
+    // --- FIM DO Bloco de Debug 1 ---
 
-    if (parametros) {
-        yyerror("Foram passados mais argumentos do que a função espera.");
+
+    // --- NOVO Bloco de Debug 2: Inspecionando os Parâmetros da DECLARAÇÃO (a, b) ---
+    tabela_simbolos_t* simb_func_debug = busca_funcao_ts(ts, func->nome);
+    printf("\n--- DEBUG: Inspecionando Parâmetros da DECLARAÇÃO da Função %s ---\n", simb_func_debug->simb->nome);
+    if (simb_func_debug && simb_func_debug->simb->lista_de_parametros) {
+        lista_simbolo_t* param_atual = simb_func_debug->simb->lista_de_parametros;
+        int param_num = 0;
+        while (param_atual != NULL) {
+            printf("  Parâmetro Declarado #%d:\n", param_num);
+            if (param_atual->simb) {
+                printf("    -> nome: '%s'\n", param_atual->simb->nome ? param_atual->simb->nome : "(null)");
+                printf("    -> tipo: '%s'\n", param_atual->simb->tipo ? param_atual->simb->tipo : "(null)"); // <<< PROCURE POR UM '(null)' AQUI
+            } else {
+                printf("    -> ERRO: O ponteiro para o símbolo nesta lista é nulo!\n");
+            }
+            param_atual = param_atual->prox;
+            param_num++;
+        }
+    } else {
+        printf("  -> A função não foi encontrada ou não tem uma lista de parâmetros salva.\n");
     }
+    printf("--- FIM DA INSPEÇÃO DA DECLARAÇÃO ---\n\n");
+    // --- FIM do Novo Bloco de Debug 2 ---
 
-    fprintf(fp, ")\n");
+
+    
 }
