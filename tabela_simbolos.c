@@ -290,6 +290,48 @@ void imprime_tabela_debug(tabela_simbolos_t * ts) {
     printf("--- FIM DO ESTADO ---\n\n");
 }
 
+lista_simbolo_t* duplica_lista_simbolo(lista_simbolo_t* original) {
+    if (original == NULL) return NULL;
+    
+    lista_simbolo_t* nova_cabeca = malloc(sizeof(lista_simbolo_t));
+    nova_cabeca->simb = original->simb;
+    
+    lista_simbolo_t* nova_atual = nova_cabeca;
+    lista_simbolo_t* original_atual = original->prox;
+    
+    while (original_atual != NULL) {
+        nova_atual->prox = malloc(sizeof(lista_simbolo_t));
+        nova_atual = nova_atual->prox;
+        nova_atual->simb = original_atual->simb;
+        original_atual = original_atual->prox;
+    }
+    nova_atual->prox = NULL;
+    return nova_cabeca;
+}
+
+// Função para criar uma cópia profunda de um símbolo
+simbolo_t* duplica_simbolo(simbolo_t* original) {
+    if (original == NULL) {
+        return NULL;
+    }
+    
+    simbolo_t* copia = malloc(sizeof(simbolo_t));
+    if (copia == NULL) {
+        yyerror("Falha ao alocar memória para duplicar símbolo.");
+        exit(1);
+    }
+
+    // Usa strdup para criar cópias das strings, garantindo memória nova
+    copia->nome = strdup(original->nome);
+    copia->tipo = strdup(original->tipo);
+    copia->tipo_simb = strdup(original->tipo_simb);
+
+    copia->escopo = original->escopo;
+    copia->lista_de_parametros = NULL; // Uma cópia de um parâmetro não tem sua própria lista
+
+    return copia;
+}
+
 void insere_parametros_funcao(tabela_simbolos_t* ts){
     tabela_simbolos_t* func = ts;
     while(func->simb->escopo == 1){
@@ -307,9 +349,15 @@ void insere_parametros_funcao(tabela_simbolos_t* ts){
     }
     
     for(int i = count-1; i >= 0; i--){
+        simbolo_t* simbolo_original = params[i]->simb;
+
+        // CRIA UMA CÓPIA INDEPENDENTE DELE
+        simbolo_t* copia_do_simbolo = duplica_simbolo(simbolo_original);
+
+        // Insere a CÓPIA (não o original) na lista de parâmetros da função.
         func->simb->lista_de_parametros = insere_lista_simbolo(
             func->simb->lista_de_parametros, 
-            params[i]->simb
+            copia_do_simbolo 
         );
         
     }
@@ -321,3 +369,4 @@ void insere_parametros_funcao(tabela_simbolos_t* ts){
     }
     printf("FIM---------------------------------------\n");
 }
+

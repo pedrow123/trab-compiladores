@@ -6,6 +6,7 @@ nome: x, tipo simbolo: variavel, tipo: INTEIRO, escopo: 0
 ----- TABELA DE SÍMBOLOS -----
 nome: plus, tipo simbolo: retorno, tipo: INTEIRO, escopo: 1 
 nome: plus, tipo simbolo: funcao, tipo: INTEIRO, escopo: 0 
+nome: c, tipo simbolo: ponteiro, tipo: INTEIRO, escopo: 1 
 nome: b, tipo simbolo: parametro, tipo: INTEIRO, escopo: 1 
 nome: a, tipo simbolo: parametro, tipo: INTEIRO, escopo: 1 
 nome: z, tipo simbolo: variavel, tipo: INTEIRO, escopo: 0 

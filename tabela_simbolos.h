@@ -65,4 +65,6 @@ void imprime_tabela_debug(tabela_simbolos_t * ts);
 
 void insere_parametros_funcao(tabela_simbolos_t* ts);
 
+lista_simbolo_t* duplica_lista_simbolo(lista_simbolo_t* original);
+
 #endif
