@@ -121,106 +121,169 @@ tabela_simbolos_t * busca_funcao_ts(tabela_simbolos_t * ts, char *nome){
     }
     return NULL;
 }
-
-void cria_chamada_funcao(FILE* fp, exp_t* parametros, exp_t* func, tabela_simbolos_t* ts, int temp_count){
-
-    // --- Bloco de Debug 1: Inspecionando os Argumentos da CHAMADA (x, y) ---
-    printf("\n--- DEBUG: Inspecionando Argumentos na Chamada da Função '%s' ---\n", func->nome);
-    exp_t* arg_atual = parametros;
-    int arg_num = 0;
-    if (arg_atual == NULL) {
-        printf("  -> Nenhum argumento foi passado para a função.\n");
-    } else {
-        while (arg_atual != NULL) {
-            printf("  Argumento #%d:\n", arg_num);
-            printf("    -> nome:        '%s'\n", arg_atual->nome ? arg_atual->nome : "(null)");
-            printf("    -> tipo:        '%s'\n", arg_atual->tipo ? arg_atual->tipo : "(null)");
-            printf("    -> tipo_llvm:   '%s'\n", arg_atual->tipo_llvm ? arg_atual->tipo_llvm : "(null)");
-            arg_atual = arg_atual->prox;
-            arg_num++;
-        }
-    }
-    printf("--- FIM DA INSPEÇÃO DE ARGUMENTOS ---\n\n");
-    // --- FIM DO Bloco de Debug 1 ---
-
-
-    // --- NOVO Bloco de Debug 2: Inspecionando os Parâmetros da DECLARAÇÃO (a, b) ---
-    tabela_simbolos_t* simb_func_debug = busca_funcao_ts(ts, func->nome);
-    printf("\n--- DEBUG: Inspecionando Parâmetros da DECLARAÇÃO da Função %s ---\n", simb_func_debug->simb->nome);
-    if (simb_func_debug && simb_func_debug->simb->lista_de_parametros) {
-        lista_simbolo_t* param_atual = simb_func_debug->simb->lista_de_parametros;
-        int param_num = 0;
-        while (param_atual != NULL) {
-            printf("  Parâmetro Declarado #%d:\n", param_num);
-            if (param_atual->simb) {
-                printf("    -> nome: '%s'\n", param_atual->simb->nome ? param_atual->simb->nome : "(null)");
-                printf("    -> tipo: '%s'\n", param_atual->simb->tipo ? param_atual->simb->tipo : "(null)"); // <<< PROCURE POR UM '(null)' AQUI
-                printf("    -> tipo_simb: '%s'\n", param_atual->simb->tipo_simb ? param_atual->simb->tipo_simb : "(null)");
-            } else {
-                printf("    -> ERRO: O ponteiro para o símbolo nesta lista é nulo!\n");
-            }
-            param_atual = param_atual->prox;
-            param_num++;
-        }
-    } else {
-        printf("  -> A função não foi encontrada ou não tem uma lista de parâmetros salva.\n");
-    }
-    printf("--- FIM DA INSPEÇÃO DA DECLARAÇÃO ---\n\n");
-    // --- FIM do Novo Bloco de Debug 2 ---
-
-    simbolo_t* simb_func = busca_simbolo(ts, func->nome);
+void cria_chamada_funcao(FILE* fp, exp_t* argumentos_passados, exp_t* func, simbolo_t* simb_func, int* p_temp_count) {
     if (!simb_func) {
         char erro[256];
-        sprintf(erro, "Função '%s' não foi declarada anteriormente!", func->nome);
+        sprintf(erro, "Símbolo da função '%s' não encontrado.", func->nome);
         yyerror(erro);
         return;
     }
 
-    fprintf(fp, "%%%d = call %s @%s(", temp_count, converte_tipo(simb_func->tipo), func->nome);
+    char arg_strings[64][128];
+    int arg_count = 0;         
 
     lista_simbolo_t* param_decl = simb_func->lista_de_parametros;
-    exp_t* arg_pass = parametros;
+    exp_t* arg_pass = argumentos_passados;
 
     while (param_decl != NULL) {
         if (arg_pass == NULL) {
             yyerror("Faltam argumentos na chamada da função.");
-            fprintf(fp, ")\n"); // Fecha a chamada para evitar erro de sintaxe LLVM
             return;
         }
 
-        // Exemplo: Verificação de tipo (ajuste conforme necessário)
         if (strcmp(converte_tipo(param_decl->simb->tipo), arg_pass->tipo_llvm) != 0) {
             char erro[256];
             sprintf(erro, "Tipo do parâmetro '%s' não corresponde ao argumento.", param_decl->simb->nome);
             yyerror(erro);
         }
-        // Exemplo: Verificação de parâmetro por referência (VAR)
         if (strcmp(param_decl->simb->tipo_simb, "ponteiro") == 0 && strcmp(arg_pass->tipo, "variavel") != 0) {
             char erro[256];
             sprintf(erro, "Parâmetro '%s' é por referência (VAR), mas o argumento não é uma variável!", param_decl->simb->nome);
             yyerror(erro);
         }
-        // --- FIM DAS VERIFICAÇÕES ---
 
-        // Imprime o argumento na chamada LLVM
-        fprintf(fp, "%s %%%d", arg_pass->tipo_llvm, arg_pass->id_temporario);
+        
+        if (strcmp(param_decl->simb->tipo_simb, "parametro") == 0) {
+            exp_t* valor_arg = gera_load_se_necessario(fp, arg_pass, p_temp_count);
+            sprintf(arg_strings[arg_count], "%s %%%d", valor_arg->tipo_llvm, valor_arg->id_temporario);
 
-        // Avança para o próximo parâmetro e próximo argumento
+        } else { // Passagem por REFERÊNCIA
+            sprintf(arg_strings[arg_count], "ptr @%s", arg_pass->nome);
+        }
+        
+        arg_count++;
         param_decl = param_decl->prox;
         arg_pass = arg_pass->prox;
+    }
 
-        // Imprime a vírgula se ainda houver mais parâmetros declarados
-        if (param_decl != NULL) {
+    if (arg_pass != NULL) {
+        yyerror("Foram passados mais argumentos do que a função espera.");
+        return;
+    }
+
+    int func_result_id = (*p_temp_count)++;
+    func->id_temporario = func_result_id;
+
+    fprintf(fp, "%%%d = call %s @%s(", 
+            func_result_id, 
+            converte_tipo(simb_func->tipo), 
+            func->nome);
+
+    for (int i = 0; i < arg_count; i++) {
+        fprintf(fp, "%s", arg_strings[i]);
+        if (i < arg_count - 1) {
             fprintf(fp, ", ");
         }
     }
 
-    // 5. Após o laço, verifica se sobraram argumentos que não foram usados
-    if (arg_pass != NULL) {
-        yyerror("Foram passados mais argumentos do que a função espera.");
-    }
-
-    // 6. Fecha a instrução de chamada LLVM
     fprintf(fp, ")\n");
-    
 }
+
+// void cria_chamada_funcao(FILE* fp, exp_t* parametros, exp_t* func, tabela_simbolos_t* ts, int temp_count){
+
+//     // --- Bloco de Debug 1: Inspecionando os Argumentos da CHAMADA (x, y) ---
+//     printf("\n--- DEBUG: Inspecionando Argumentos na Chamada da Função '%s' ---\n", func->nome);
+//     exp_t* arg_atual = parametros;
+//     int arg_num = 0;
+//     if (arg_atual == NULL) {
+//         printf("  -> Nenhum argumento foi passado para a função.\n");
+//     } else {
+//         while (arg_atual != NULL) {
+//             printf("  Argumento #%d:\n", arg_num);
+//             printf("    -> nome:        '%s'\n", arg_atual->nome ? arg_atual->nome : "(null)");
+//             printf("    -> tipo:        '%s'\n", arg_atual->tipo ? arg_atual->tipo : "(null)");
+//             printf("    -> tipo_llvm:   '%s'\n", arg_atual->tipo_llvm ? arg_atual->tipo_llvm : "(null)");
+//             arg_atual = arg_atual->prox;
+//             arg_num++;
+//         }
+//     }
+//     printf("--- FIM DA INSPEÇÃO DE ARGUMENTOS ---\n\n");
+
+//     tabela_simbolos_t* simb_func_debug = busca_funcao_ts(ts, func->nome);
+//     printf("\n--- DEBUG: Inspecionando Parâmetros da DECLARAÇÃO da Função %s ---\n", simb_func_debug->simb->nome);
+//     if (simb_func_debug && simb_func_debug->simb->lista_de_parametros) {
+//         lista_simbolo_t* param_atual = simb_func_debug->simb->lista_de_parametros;
+//         int param_num = 0;
+//         while (param_atual != NULL) {
+//             printf("  Parâmetro Declarado #%d:\n", param_num);
+//             if (param_atual->simb) {
+//                 printf("    -> nome: '%s'\n", param_atual->simb->nome ? param_atual->simb->nome : "(null)");
+//                 printf("    -> tipo: '%s'\n", param_atual->simb->tipo ? param_atual->simb->tipo : "(null)"); // <<< PROCURE POR UM '(null)' AQUI
+//                 printf("    -> tipo_simb: '%s'\n", param_atual->simb->tipo_simb ? param_atual->simb->tipo_simb : "(null)");
+//             } else {
+//                 printf("    -> ERRO: O ponteiro para o símbolo nesta lista é nulo!\n");
+//             }
+//             param_atual = param_atual->prox;
+//             param_num++;
+//         }
+//     } else {
+//         printf("  -> A função não foi encontrada ou não tem uma lista de parâmetros salva.\n");
+//     }
+//     printf("--- FIM DA INSPEÇÃO DA DECLARAÇÃO ---\n\n");
+//     // --- FIM do Novo Bloco de Debug 2 ---
+
+//     simbolo_t* simb_func = busca_simbolo(ts, func->nome);
+//     if (!simb_func) {
+//         char erro[256];
+//         sprintf(erro, "Função '%s' não foi declarada anteriormente!", func->nome);
+//         yyerror(erro);
+//         return;
+//     }
+
+//     fprintf(fp, "%%%d = call %s @%s(", temp_count, converte_tipo(simb_func->tipo), func->nome);
+
+//     lista_simbolo_t* param_decl = simb_func->lista_de_parametros;
+//     exp_t* arg_pass = parametros;
+
+//     while (param_decl != NULL) {
+//         if (arg_pass == NULL) {
+//             yyerror("Faltam argumentos na chamada da função.");
+//             fprintf(fp, ")\n"); // Fecha a chamada para evitar erro de sintaxe LLVM
+//             return;
+//         }
+
+//         // Exemplo: Verificação de tipo (ajuste conforme necessário)
+//         if (strcmp(converte_tipo(param_decl->simb->tipo), arg_pass->tipo_llvm) != 0) {
+//             char erro[256];
+//             sprintf(erro, "Tipo do parâmetro '%s' não corresponde ao argumento.", param_decl->simb->nome);
+//             yyerror(erro);
+//         }
+//         // Exemplo: Verificação de parâmetro por referência (VAR)
+//         if (strcmp(param_decl->simb->tipo_simb, "ponteiro") == 0 && strcmp(arg_pass->tipo, "variavel") != 0) {
+//             char erro[256];
+//             sprintf(erro, "Parâmetro '%s' é por referência (VAR), mas o argumento não é uma variável!", param_decl->simb->nome);
+//             yyerror(erro);
+//         }
+
+//         if(strcmp(param_decl->simb->tipo_simb, "ponteiro") == 0){
+
+//             fprintf(fp, "%s ptr @%s", arg_pass->tipo_llvm, arg_pass->nome);
+//         } else {
+//             fprintf(fp, "%s %%%d", arg_pass->tipo_llvm, arg_pass->id_temporario);
+//         }
+
+//         param_decl = param_decl->prox;
+//         arg_pass = arg_pass->prox;
+
+//         if (param_decl != NULL) {
+//             fprintf(fp, ", ");
+//         }
+//     }
+
+//     if (arg_pass != NULL) {
+//         yyerror("Foram passados mais argumentos do que a função espera.");
+//     }
+
+//     fprintf(fp, ")\n");
+    
+// }

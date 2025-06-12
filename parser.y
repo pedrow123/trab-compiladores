@@ -138,15 +138,25 @@ LISTA_DE_ENUNCIADOS: ENUNCIADO
                    ;
 
 ENUNCIADO: VARIAVEL OPERADOR_ATRIBUICAO EXPRESSAO {
-            if (!strcmp($3->tipo_llvm, "i32")) {
-                fprintf(out_file, "store i32 %%%d, ptr %%%s\n", $3->id_temporario, $1);
-            } else if (!strcmp($3->tipo_llvm, "float")) {
-                fprintf(out_file, "store float %%%d, ptr %%%s\n", $3->id_temporario, $1);
-            } else {
-                fprintf(stderr, "Tipo LLVM não suportado na atribuição: %s\n", $3->tipo_llvm);
-                exit(1);
+            
+
+
+            exp_t* valor_direita = gera_load_se_necessario(out_file, $3, &temp_count);
+
+            char* nome_var_esquerda = $1;
+
+            simbolo_t* simb_esquerda = busca_simbolo(tab_simbolos, nome_var_esquerda);
+            if (simb_esquerda == NULL) {
+                yyerror("Variável do lado esquerdo da atribuição não encontrada.");
             }
-        }
+            const char* prefixo = get_prefixo_de_escopo(simb_esquerda);
+
+            fprintf(out_file, "store %s %%%d, ptr %s%s\n",
+                    valor_direita->tipo_llvm,
+                    valor_direita->id_temporario,
+                    prefixo,
+                    nome_var_esquerda);
+            }
          | CHAMADA_DE_PROCEDIMENTO
          | ENUNCIADO_COMPOSTO
          | IF EXPRESSAO {
@@ -193,7 +203,6 @@ TERMO: FATOR
      ;
 
 FATOR:ID {
-        // imprime_tabela_debug(tab_simbolos); 
         if (tab_simbolos == NULL) {
             fprintf(stderr, "Erro interno: tabela de símbolos não inicializada\n");
             exit(1);
@@ -204,26 +213,17 @@ FATOR:ID {
             sprintf(erro, "variável '%s' não declarada", $1);
             yyerror(erro);
         }
-        if(strcmp("variavel", s->tipo_simb) == 0 || strcmp("parametro", s->tipo_simb) == 0 || strcmp("ponteiro", s->tipo_simb) == 0){
 
-            exp_t* e = malloc(sizeof(exp_t));
-            e->nome = strdup($1);
-            e->prox = NULL;
-            e->tipo = "variavel";
-            e->tipo_llvm = converte_tipo(s->tipo);
-            e->id_temporario = temp_count++;
-            fprintf(out_file, "%%%d = load %s, ptr %%%s\n", e->id_temporario, e->tipo_llvm, $1);
-            $$ = e;
-        } else {
-            // CORREÇÃO: Tratar outros casos ou lançar erro
-            // Se um ID de função puder ser usado como uma expressão, trate aqui.
-            // Por enquanto, vamos lançar um erro para encontrar o problema.
-            char erro[256];
-            sprintf(erro, "uso inválido do identificador '%s' como expressão", $1);
-            yyerror(erro);
-            // Ou, se for um erro silencioso, garanta que $$ seja nulo
-            // $$ = NULL; 
-        }
+
+        exp_t* e = malloc(sizeof(exp_t));
+        e->nome = strdup($1);
+        e->prox = NULL;
+        e->tipo = "variavel"; // IMPORTANTE: Indica que é uma referência a uma variável
+        e->tipo_llvm = converte_tipo(s->tipo);
+        e->id_temporario = -1; 
+        e->simb = s;
+        $$ = e;
+        
     }
      | ID ABRE_PARENTESES LISTA_DE_EXPRESSOES FECHA_PARENTESES {
         simbolo_t* s = busca_simbolo(tab_simbolos, $1);
@@ -237,10 +237,10 @@ FATOR:ID {
         e->prox = NULL;
         e->tipo = "funcao";
         e->tipo_llvm = converte_tipo(s->tipo);
-        e->id_temporario = temp_count++;
-        cria_chamada_funcao(out_file, $3, e, tab_simbolos, e->id_temporario);
-        // fprintf(out_file, "%%%d = load %s, ptr %%%s\n", e->id_temporario, e->tipo_llvm, $1);
-        
+        e->simb = s;
+
+        // cria_chamada_funcao(out_file, $3, e, tab_simbolos, &temp_count);
+        cria_chamada_funcao(out_file, $3, e, s, &temp_count);
         
         $$ = e;
      }
@@ -253,12 +253,14 @@ FATOR:ID {
             e->tipo_llvm = strdup("float");
             e->nome = strdup($1);
             e->id_temporario = temp_count++;
+            e->simb = NULL;
             fprintf(out_file, "%%%d = fadd float 0.0, %s\n", e->id_temporario, $1);
         } else {
             e->tipo = strdup("numero");
             e->tipo_llvm = strdup("i32");
             e->nome = strdup($1);
             e->id_temporario = temp_count++;
+            e->simb = NULL;
             fprintf(out_file, "%%%d = add i32 0, %s\n", e->id_temporario, $1);
         }
 

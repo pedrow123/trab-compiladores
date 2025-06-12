@@ -5,9 +5,6 @@ typedef struct simbolo {
     char *nome;
     char *tipo;
     char *tipo_simb;
-    // char nome[100];
-    // char tipo[100]; // integer, float
-    // char tipo_simb[100]; // variavel, function, procedure
     int escopo;
     struct lista_simbolo* lista_de_parametros;
 } simbolo_t;
@@ -28,6 +25,7 @@ typedef struct exp {
     char* tipo;            // "numero", "var", "funcao", etc
     int id_temporario;     // número do temporário gerado (LLVM)
     char* tipo_llvm;       // i32, float, etc
+    struct simbolo* simb; 
     struct exp *prox;
 } exp_t;
 
@@ -66,5 +64,6 @@ void imprime_tabela_debug(tabela_simbolos_t * ts);
 void insere_parametros_funcao(tabela_simbolos_t* ts);
 
 lista_simbolo_t* duplica_lista_simbolo(lista_simbolo_t* original);
-
+exp_t* gera_load_se_necessario(FILE* fp, exp_t* e, int* p_temp_count);
+char* get_prefixo_de_escopo(simbolo_t* s);
 #endif

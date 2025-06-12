@@ -199,17 +199,24 @@ tabela_simbolos_t* ir_para_fim(tabela_simbolos_t* ts) {
 }
 
 exp_t* cria_expressao_binaria(FILE* out_file, exp_t* e1, exp_t* e2, const char* operador, int* temp_count) {
-    // Verifica compatibilidade de tipo
-    if (strcmp(e1->tipo_llvm, e2->tipo_llvm) != 0) {
-        fprintf(stderr, "Erro: operação entre tipos incompatíveis: %s e %s\n", e1->tipo_llvm, e2->tipo_llvm);
+    exp_t* valor1 = gera_load_se_necessario(out_file, e1, temp_count);
+
+    exp_t* valor2 = gera_load_se_necessario(out_file, e2, temp_count);
+    if(!valor1 || !valor2){
+        fprintf(stderr, "Não corresponde expressão. \n");
         exit(1);
     }
 
-    char* tipo_llvm = e1->tipo_llvm;
+    // Verifica compatibilidade de tipo
+    if (strcmp(valor1->tipo_llvm, valor2->tipo_llvm) != 0) {
+        fprintf(stderr, "Erro: operação entre tipos incompatíveis: %s e %s\n", valor1->tipo_llvm, valor2->tipo_llvm);
+        exit(1);
+    }
+
+    char* tipo_llvm = valor1->tipo_llvm;
     int id_result = (*temp_count)++;
     const char* instr = NULL;
 
-    // Operações aritméticas
     if (strcmp(operador, "+") == 0) {
         instr = strcmp(tipo_llvm, "i32") == 0 ? "add i32" : "fadd float";
     } else if (strcmp(operador, "-") == 0) {
@@ -220,7 +227,6 @@ exp_t* cria_expressao_binaria(FILE* out_file, exp_t* e1, exp_t* e2, const char* 
         instr = strcmp(tipo_llvm, "i32") == 0 ? "sdiv i32" : "fdiv float";
     }
 
-    // Operações de comparação
     else if (strcmp(operador, "=") == 0) {
         instr = strcmp(tipo_llvm, "i32") == 0 ? "icmp eq"  : "fcmp oeq";
         tipo_llvm = "i1";
@@ -244,13 +250,14 @@ exp_t* cria_expressao_binaria(FILE* out_file, exp_t* e1, exp_t* e2, const char* 
         exit(1);
     }
 
-    fprintf(out_file, "%%%d = %s %%%d, %%%d\n", id_result, instr, e1->id_temporario, e2->id_temporario);
+    fprintf(out_file, "%%%d = %s %%%d, %%%d\n", id_result, instr, valor1->id_temporario, valor2->id_temporario);
 
     exp_t* resultado = malloc(sizeof(exp_t));
     resultado->nome = strdup("exp");
     resultado->tipo = strdup("temp");
     resultado->id_temporario = id_result;
     resultado->tipo_llvm = tipo_llvm;
+    resultado->simb = NULL;
     return resultado;
 }
 
@@ -267,7 +274,6 @@ exp_t* cria_parametros_funcao(exp_t* raiz, exp_t* nova) {
     }
 }
 
-// Função para imprimir o estado da tabela de símbolos para depuração
 void imprime_tabela_debug(tabela_simbolos_t * ts) {
     printf("\n--- ESTADO DA TABELA DE SÍMBOLOS ---\n");
     tabela_simbolos_t * atual = ts;
@@ -309,7 +315,6 @@ lista_simbolo_t* duplica_lista_simbolo(lista_simbolo_t* original) {
     return nova_cabeca;
 }
 
-// Função para criar uma cópia profunda de um símbolo
 simbolo_t* duplica_simbolo(simbolo_t* original) {
     if (original == NULL) {
         return NULL;
@@ -321,13 +326,12 @@ simbolo_t* duplica_simbolo(simbolo_t* original) {
         exit(1);
     }
 
-    // Usa strdup para criar cópias das strings, garantindo memória nova
     copia->nome = strdup(original->nome);
     copia->tipo = strdup(original->tipo);
     copia->tipo_simb = strdup(original->tipo_simb);
 
     copia->escopo = original->escopo;
-    copia->lista_de_parametros = NULL; // Uma cópia de um parâmetro não tem sua própria lista
+    copia->lista_de_parametros = NULL;
 
     return copia;
 }
@@ -341,7 +345,7 @@ void insere_parametros_funcao(tabela_simbolos_t* ts){
     int count = 0;
     tabela_simbolos_t* params[64];
 
-    tabela_simbolos_t* aux = func->prox;  // pula o símbolo da função
+    tabela_simbolos_t* aux = func->prox;  
 
     while (aux && (strcmp(aux->simb->tipo_simb, "parametro") == 0 || strcmp(aux->simb->tipo_simb, "ponteiro") == 0)) {
         params[count++] = aux;
@@ -351,22 +355,47 @@ void insere_parametros_funcao(tabela_simbolos_t* ts){
     for(int i = count-1; i >= 0; i--){
         simbolo_t* simbolo_original = params[i]->simb;
 
-        // CRIA UMA CÓPIA INDEPENDENTE DELE
         simbolo_t* copia_do_simbolo = duplica_simbolo(simbolo_original);
 
-        // Insere a CÓPIA (não o original) na lista de parâmetros da função.
         func->simb->lista_de_parametros = insere_lista_simbolo(
             func->simb->lista_de_parametros, 
             copia_do_simbolo 
         );
         
     }
-    printf("Lista de Parâmetros------------------------- FUNÇÃO: %s\n", func->simb->nome);
-    lista_simbolo_t* lista_aux = func->simb->lista_de_parametros;
-    while(lista_aux != NULL){
-        printf("%s\n", lista_aux->simb->nome);
-        lista_aux = lista_aux->prox;
-    }
-    printf("FIM---------------------------------------\n");
 }
 
+
+exp_t* gera_load_se_necessario(FILE* fp, exp_t* e, int* p_temp_count) {
+    if (e == NULL) return NULL;
+
+    // só gera 'load' se for uma referência de variável
+    if (strcmp(e->tipo, "variavel") == 0) {
+        exp_t* e_valor = malloc(sizeof(exp_t));
+        
+        e_valor->nome = strdup(e->nome);
+        e_valor->prox = NULL;
+        e_valor->tipo = strdup(e->tipo); 
+        e_valor->tipo_llvm = strdup(e->tipo_llvm);
+        e_valor->id_temporario = (*p_temp_count)++;
+
+
+        fprintf(fp, "%%%d = load %s, ptr %s%s\n", 
+                e_valor->id_temporario, 
+                e_valor->tipo_llvm, 
+                get_prefixo_de_escopo(e->simb), // <<< MUDANÇA
+                e->nome);
+
+        return e_valor;
+    }
+
+    // se não for 'variavel', já é um valor, retorna sem modificar
+    return e;
+}
+
+char* get_prefixo_de_escopo(simbolo_t* s) {
+    if (s != NULL && s->escopo == 0) {
+        return "@";
+    }
+    return "%";
+}

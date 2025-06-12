@@ -20,10 +20,9 @@ ret i32 %3
 
 define i32 @main(){
 entry:
-%4 = load i32, ptr %x
-%5 = load i32, ptr %y
-%6 = load i32, ptr %z
-%7 = call i32 @plus(i32 %4, i32 %5, i32 %6)
-store i32 %7, ptr %z
+%4 = load i32, ptr @x
+%5 = load i32, ptr @y
+%6 = call i32 @plus(i32 %4, i32 %5, ptr @z)
+store i32 %6, ptr @z
 ret i32 0
 }
