@@ -130,41 +130,33 @@ tabela_simbolos_t* destroi_var_locais(tabela_simbolos_t* ts) {
     tabela_simbolos_t* atual = ts;
 
     while (atual != NULL) {
-        // Verifica se o escopo é local (1)
         if (atual->simb && atual->simb->escopo == 1) {
             tabela_simbolos_t* para_remover = atual;
-            
-            // Pega os vizinhos antes de modificar
+ 
             tabela_simbolos_t* anterior = para_remover->prev;
             tabela_simbolos_t* proximo = para_remover->prox;
 
             if (anterior == NULL) {
-                // Estamos removendo o primeiro elemento (a cabeça da lista)
-                ts = proximo; // A nova cabeça é o próximo
+                ts = proximo;
             } else {
-                // Estamos removendo do meio ou do fim
                 anterior->prox = proximo;
             }
 
             if (proximo != NULL) {
-                // NOVO E CRUCIAL: Ajusta o ponteiro 'prev' do nó seguinte
                 proximo->prev = anterior;
             }
 
-            // Avança o 'atual' para o próximo nó ANTES de liberar a memória
             atual = proximo;
 
-            // CORREÇÃO: Liberar os campos alocados com strdup() primeiro
             if (para_remover->simb) {
                 free(para_remover->simb->nome);
                 free(para_remover->simb->tipo);
                 free(para_remover->simb->tipo_simb);
-                free(para_remover->simb); // Agora libera a struct do símbolo
+                free(para_remover->simb); 
             }
-            free(para_remover); // E finalmente, libera o nó da lista
+            free(para_remover);
 
         } else {
-            // Se não removeu, apenas avança para o próximo
             atual = atual->prox;
         }
     }
@@ -225,6 +217,14 @@ exp_t* cria_expressao_binaria(FILE* out_file, exp_t* e1, exp_t* e2, const char* 
         instr = strcmp(tipo_llvm, "i32") == 0 ? "mul i32" : "fmul float";
     } else if (strcmp(operador, "/") == 0) {
         instr = strcmp(tipo_llvm, "i32") == 0 ? "sdiv i32" : "fdiv float";
+    } else if (strcmp(operador, "or") == 0) {
+        if(strcmp(valor1->tipo_llvm, "i32") == 0 && strcmp(valor2->tipo_llvm, "i32") == 0)
+            instr = "or i32";
+        else {
+            fprintf(stderr, "Só é possível fazer comparações or com inteiros.\n");
+            exit(1);
+        }
+
     }
 
     else if (strcmp(operador, "=") == 0) {

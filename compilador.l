@@ -34,7 +34,7 @@ ID [a-zA-Z][a-zA-Z1-9]*
 "var" { return VAR; }
 ")" { return FECHA_PARENTESES; }
 "(" { return ABRE_PARENTESES; }
-"procedure" { printf("TOKEN: procedure\n"); return PROCEDURE; }
+"procedure" { return PROCEDURE; }
 "function" { return FUNCTION; }
 "real" { return REAL; }
 "integer" { return INTEIRO; }

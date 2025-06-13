@@ -19,6 +19,8 @@ int temp_count = 0;
 int dentro_de_funcao = 0;
 
 int if_count = 0;
+int while_count = 0;
+
 %}
 
 %union {
@@ -41,6 +43,7 @@ int if_count = 0;
 %type <lista_s> LISTA_DE_IDENTIFICADORES LISTA_DE_PARAMETROS
 %type <lista_s> FUNCTION PROCEDURE 
 %type <str> VARIAVEL
+%type <str> SINAL
 %type <exp> FATOR
 %type <exp> TERMO
 %type <exp> LISTA_DE_EXPRESSOES
@@ -54,7 +57,7 @@ int if_count = 0;
 %%
 
 PROGRAMA: PROGRAM ID ABRE_PARENTESES LISTA_DE_IDENTIFICADORES FECHA_PARENTESES PONTO_VIRGULA
-        DECLARACOES {cria_globais(tab_simbolos, out_file); imprime_ts(log_file, tab_simbolos);}
+        DECLARACOES {cria_cabecalho(out_file); cria_globais(tab_simbolos, out_file); imprime_ts(log_file, tab_simbolos);}
         DECLARACOES_DE_SUBPROGRAMAS {imprime_ts(log_file, tab_simbolos);
         fprintf(out_file, "\n\ndefine i32 @main(){\nentry:\n");
         }
@@ -109,7 +112,7 @@ CABECALHO_DE_SUBPROGRAMA: FUNCTION ID
                         PONTO_VIRGULA
                         | PROCEDURE ID
                         {$1 = insere_lista_simbolo(NULL, cria_simbolo($2, "procedure", escopo_atual)); escopo_atual++;}
-                        ARGUMENTOS {tab_simbolos = insere_simbolos_ts(tab_simbolos, $1);} PONTO_VIRGULA 
+                        ARGUMENTOS {tab_simbolos = insere_simbolos_ts(tab_simbolos, $1); insere_parametros_funcao(tab_simbolos);} PONTO_VIRGULA 
                         ;
 
 ARGUMENTOS: ABRE_PARENTESES LISTA_DE_PARAMETROS FECHA_PARENTESES
@@ -138,9 +141,7 @@ LISTA_DE_ENUNCIADOS: ENUNCIADO
                    ;
 
 ENUNCIADO: VARIAVEL OPERADOR_ATRIBUICAO EXPRESSAO {
-            
-
-
+        
             exp_t* valor_direita = gera_load_se_necessario(out_file, $3, &temp_count);
 
             char* nome_var_esquerda = $1;
@@ -165,14 +166,50 @@ ENUNCIADO: VARIAVEL OPERADOR_ATRIBUICAO EXPRESSAO {
             $1 = if_count;
         }
          THEN ENUNCIADO {cria_fim_then(out_file, $1);} ELSE ENUNCIADO {cria_fim_else(out_file, $1);}
-         | WHILE EXPRESSAO DO ENUNCIADO 
+         | WHILE {
+            while_count++;
+            cria_while(out_file, while_count);
+            $1 = while_count;
+        } EXPRESSAO DO{
+            cria_do_while(out_file, $3, $1);
+        } ENUNCIADO {
+            cria_fim_while(out_file, $1);
+        }
+            
          ;
 
 VARIAVEL: ID 
         ;
 
 CHAMADA_DE_PROCEDIMENTO: ID
-                    | ID ABRE_PARENTESES LISTA_DE_EXPRESSOES FECHA_PARENTESES
+                    {
+                        simbolo_t* s = busca_simbolo(tab_simbolos, $1);
+                        if (s == NULL || (strcmp(s->tipo_simb, "procedure") != 0 && strcmp(s->tipo_simb, "funcao") != 0)) {
+                            char erro[256];
+                            sprintf(erro, "'%s' não é um procedimento ou função declarada.", $1);
+                            yyerror(erro);
+                        }
+
+                        cria_chamada_procedimento(out_file, NULL, s, &temp_count);
+                    }
+                    | ID ABRE_PARENTESES LISTA_DE_EXPRESSOES FECHA_PARENTESES 
+                    {
+                        if(strcmp("write", $1) == 0){
+                            cria_write(out_file, $3, tab_simbolos, &temp_count);
+                        } else if(strcmp("read", $1) == 0){
+                            cria_read(out_file, $3, tab_simbolos, &temp_count);
+                        } else {
+
+                            simbolo_t* s = busca_simbolo(tab_simbolos, $1);
+                            if (s == NULL || (strcmp(s->tipo_simb, "procedure") != 0 && strcmp(s->tipo_simb, "funcao") != 0)) {
+                                char erro[256];
+                                sprintf(erro, "'%s' não é um procedimento ou função declarada.", $1);
+                                yyerror(erro);
+                            }
+                            cria_chamada_procedimento(out_file, $3, s, &temp_count);
+                        }
+                        
+                    }
                     ;
 
 LISTA_DE_EXPRESSOES: EXPRESSAO {$$ = cria_parametros_funcao(NULL, $1);}
@@ -180,12 +217,21 @@ LISTA_DE_EXPRESSOES: EXPRESSAO {$$ = cria_parametros_funcao(NULL, $1);}
                    ;
 
 EXPRESSAO: EXPRESSAO_SIMPLES {$$ = $1;}
-         | EXPRESSAO_SIMPLES OPERADOR_RELACIONAL EXPRESSAO_SIMPLES { $$ = cria_expressao_binaria(out_file, $1, $3, $2, &temp_count); temp_count++;}
+         | EXPRESSAO_SIMPLES OPERADOR_RELACIONAL EXPRESSAO_SIMPLES { $$ = cria_expressao_binaria(out_file, $1, $3, $2, &temp_count);}
          ;
 
 EXPRESSAO_SIMPLES: TERMO { $$ = $1; }
                  | SINAL TERMO  {
-                    $$ = $2; // ignora o sinal por enquanto
+                    if (!strcmp("-", $1)) {
+                        temp_count++;
+                        if (!strcmp("REAL", $2->tipo))
+                            fprintf(out_file, "%%%d = fmul %s %%%d, -1\n", temp_count, converte_tipo($2->tipo), $2->id_temporario);
+                        else
+                            fprintf(out_file, "%%%d = mul %s %%%d, -1\n", temp_count, converte_tipo($2->tipo), $2->id_temporario);
+                        $2->id_temporario = temp_count-1;
+                    }
+                    $$ = $2;
+                    
                 } 
                  | EXPRESSAO_SIMPLES MAIS EXPRESSAO_SIMPLES {
                      $$ = cria_expressao_binaria(out_file, $1, $3, "+", &temp_count);

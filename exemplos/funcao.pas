@@ -5,5 +5,8 @@ begin
     plus := a + b
 end;
 begin
-    z := plus(x,y,z)
+    read(x);
+    read(y);
+    z := plus(x,y,z);
+    write(z)
 end.
