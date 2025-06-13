@@ -170,6 +170,8 @@ ENUNCIADO: VARIAVEL OPERADOR_ATRIBUICAO EXPRESSAO {
             while_count++;
             cria_while(out_file, while_count);
             $1 = while_count;
+
+            
         } EXPRESSAO DO{
             cria_do_while(out_file, $3, $1);
         } ENUNCIADO {
